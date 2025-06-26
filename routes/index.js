@@ -6,6 +6,7 @@ const { auth } = require('../middleware/auth');
 const authRoutes = require('./authRoute');
 const patientRoutes = require('./patientRoute');
 const settingsRoutes = require('./settingsRoutes');
+const providerRoutes = require('./providerRoutes');
 
 // Public routes (no auth required)
 router.use('/auth', authRoutes);
@@ -13,6 +14,7 @@ router.use('/auth', authRoutes);
 // Protected routes (require auth)
 router.use('/patient', patientRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/physician', providerRoutes);
 router.get('/health', (req, res) => {
         res.json({
             status: 'healthy',

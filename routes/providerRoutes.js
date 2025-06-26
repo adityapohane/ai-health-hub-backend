@@ -1,10 +1,13 @@
-const express = require("express")
-const { getAllOrganizations } = require("../controllers/providerController")
-const router = express.Router()
+const express = require("express");
+const {
+  getAllOrganizations,
+  getAllPractices,
+  updateUserMapping,
+} = require("../controllers/providerController");
+const router = express.Router();
 
+router.get("/allOrganizations", getAllOrganizations);
+router.get("/allPractices", getAllPractices);
+router.get("/updatePhysicianMappings", updateUserMapping);
 
-router.get("/organizations", getAllOrganizations)
-
-
-
-module.exports = router
+module.exports = router;
