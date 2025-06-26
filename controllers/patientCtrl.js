@@ -156,7 +156,12 @@ const getPatientDataById = async (req, res) => {
 
     // Get user profile
     const [profileRows] = await connection.query(
-      `SELECT * FROM user_profiles WHERE fk_userid = ?`,
+      `SELECT *,CASE status
+    WHEN 1 THEN 'Critical'
+    WHEN 2 THEN 'Abnormal'
+    WHEN 3 THEN 'Normal'
+    ELSE 'NA'
+  END AS status FROM user_profiles WHERE fk_userid = ?`,
       [patientId]
     );
     const profile = profileRows[0];
@@ -417,7 +422,12 @@ console.log(req)
         bp AS bloodPressure,
         heart_rate AS heartRate,
         temp AS temperature,
-        status,
+        CASE status
+    WHEN 1 THEN 'Critical'
+    WHEN 2 THEN 'Abnormal'
+    WHEN 3 THEN 'Normal'
+    ELSE 'NA'
+  END AS status,
         address_line AS address
       FROM user_profiles
       ORDER BY ${orderBy} ${order}
