@@ -3,7 +3,7 @@ const connection = require("../config/db");
 
 
 // Create patient
- const addPatient = async (req, res) => {
+const addPatient = async (req, res) => {
   try {
     const {
       firstName,
@@ -36,10 +36,14 @@ const connection = require("../config/db");
       state,
       country,
       zipCode,
+      organizationId,
+      practiceId,
+      nurseId
     } = req.body;
-    let password=`${firstName}@hub`
+    let password = `${firstName}@hub`;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const insertQuery = "INSERT INTO users (username, password,fk_roleid) VALUES (?, ?,6)";
+    const insertQuery =
+      "INSERT INTO users (username, password,fk_roleid) VALUES (?, ?,6)";
     const userValue = [email, hashedPassword];
     const [result] = await connection.query(insertQuery, userValue);
     const insertedId = result.insertId;
@@ -53,22 +57,47 @@ INSERT INTO user_profiles (
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   `;
-  
-  const values1 = [
-    firstName, middleName, lastName, birthDate, email, phone,         // 1–6 ✅
-    gender, ethnicity, lastVisit, emergencyContact,                   // 7–10 ✅
-    height, weight, bmi,                                              // 11–13 ✅
-    insertedId, status,bloodPressure, heartRate, temperature, addressLine1, addressLine2, city, state, country,   zipCode,                                      // 14–16 ✅
-                                 // 17–19 ✅
-  ];
-    
+
+    const values1 = [
+      firstName,
+      middleName,
+      lastName,
+      birthDate,
+      email,
+      phone, // 1–6 ✅
+      gender,
+      ethnicity,
+      lastVisit,
+      emergencyContact, // 7–10 ✅
+      height,
+      weight,
+      bmi, // 11–13 ✅
+      insertedId,
+      status,
+      bloodPressure,
+      heartRate,
+      temperature,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      country,
+      zipCode, // 14–16 ✅
+      // 17–19 ✅
+    ];
+
     const [userResult] = await connection.query(sql1, values1);
-  
+
     const sql2 = `INSERT INTO allergies (category, allergen, reaction,patient_id) VALUES (?, ?, ?,?);`;
-    allergies?.map(async (allergy)=>{
-      const values2 = [allergy.category, allergy.allergen, allergy.reaction,insertedId];
+    allergies?.map(async (allergy) => {
+      const values2 = [
+        allergy.category,
+        allergy.allergen,
+        allergy.reaction,
+        insertedId,
+      ];
       const [allergyResult] = await connection.query(sql2, values2);
-    })
+    });
 
     const sql3 = `INSERT INTO patient_insurances (
   insurance_policy_number,
@@ -79,11 +108,20 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   insurance_type,
   effective_date,
   fk_userid
-) VALUES (?, ?, ?, ?, ?, ?, ?,?);`
-    insurance?.map(async (insurance)=>{
-      const values3 = [insurance.policyNumber, insurance.groupNumber, insurance.company, insurance.plan, insurance.expirationDate, insurance.type, insurance.effectiveDate,insertedId];
+) VALUES (?, ?, ?, ?, ?, ?, ?,?);`;
+    insurance?.map(async (insurance) => {
+      const values3 = [
+        insurance.policyNumber,
+        insurance.groupNumber,
+        insurance.company,
+        insurance.plan,
+        insurance.expirationDate,
+        insurance.type,
+        insurance.effectiveDate,
+        insertedId,
+      ];
       const [insuranceResult] = await connection.query(sql3, values3);
-    })
+    });
 
     const sql4 = `INSERT INTO patient_medication (
   patient_id,
@@ -94,11 +132,20 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   startDate,
   endDate,
   status
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
-currentMedications?.map(async (medication)=>{
-      const values4 = [insertedId, medication.name, medication.dosage, medication.frequency, medication.prescribedBy, medication.startDate, medication.endDate, medication.status];
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
+    currentMedications?.map(async (medication) => {
+      const values4 = [
+        insertedId,
+        medication.name,
+        medication.dosage,
+        medication.frequency,
+        medication.prescribedBy,
+        medication.startDate,
+        medication.endDate,
+        medication.status,
+      ];
       const [medicationResult] = await connection.query(sql4, values4);
-    })
+    });
 
     const sql5 = `INSERT INTO patient_diagnoses (
   patient_id,
@@ -106,46 +153,55 @@ currentMedications?.map(async (medication)=>{
   icd10,
   diagnosis,
   status
-) VALUES (?, ?, ?, ?, ?);`
-for (const diagnos of diagnosis || []) {
-  const values5 = [
-    insertedId,
-    diagnos.date,
-    diagnos.icd10,
-    diagnos.diagnosis,
-    diagnos.status
-  ];
-  await connection.query(sql5, values5);
-}
-
+) VALUES (?, ?, ?, ?, ?);`;
+    for (const diagnos of diagnosis || []) {
+      const values5 = [
+        insertedId,
+        diagnos.date,
+        diagnos.icd10,
+        diagnos.diagnosis,
+        diagnos.status,
+      ];
+      await connection.query(sql5, values5);
+    }
 
     const sql6 = `INSERT INTO notes (
   patient_id,
   note,
   created_by
-) VALUES (?, ?, ?);`
-notes?.map(async (note)=>{
-  const values6 = [insertedId, note.note,providerId];
-  const [noteResult] = await connection.query(sql6, values6);
-});
+) VALUES (?, ?, ?);`;
+    notes?.map(async (note) => {
+      const values6 = [insertedId, note.note, providerId];
+      const [noteResult] = await connection.query(sql6, values6);
+    });
 
-// const sql7 = `INSERT INTO users_mappings (
-//   organization_id,
-//   practice_id,
-//   user_id,
-//   role_id,
-//   fk_physician_id,
-//   fk_nurse_id
-// ) VALUES (?, ?, ?, ?, ?);`
-// const values7 = [organizationId, practiceId, insertedId, roleId, providerId,nurseId]; 
-// const [mappingResult] = await connection.query(sql7, values7);
+    const sql7 = `INSERT INTO users_mappings (
+  organizations_id,
+  practice_id,
+  user_id,
+  fk_role_id,
+  fk_physician_id,
+  fk_nurse_id
+) VALUES (?, ?, ?, ?, ?, ?);`;
+
+    const values7 = [
+      organizationId ? organizationId : 0,
+      practiceId ? practiceId : 0,
+      insertedId,
+      7,
+      providerId ? providerId : 0,
+      nurseId ? nurseId : 0,
+    ];
+    const [mappingResult] = await connection.query(sql7, values7);
     return res.status(200).json({
       success: true,
       message: "User registered successfully",
     });
   } catch (error) {
     console.error("Error creating patient:", error);
-    res.status(500).json({ success: false, message: "Error in create patient API" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error in create patient API" });
   }
 };
 
@@ -190,7 +246,6 @@ const getPatientDataById = async (req, res) => {
       WHERE patient_id = ?`,
       [patientId]
     );
-    
 
     // Get insurance
     const [insurances] = await connection.query(
@@ -235,7 +290,12 @@ const getPatientDataById = async (req, res) => {
       phone: profile.phone,
       gender: profile.gender,
       status: profile.status,
-      address: profile.address_line,
+      addressLine1: profile.address_line,
+      addressLine2: profile.address_line_2,
+      city: profile.city,
+      state: profile.state,
+      country: profile.country,
+      zipCode: profile.zip,
       birthDate: profile.dob,
       lastVisit: profile.last_visit,
       emergencyContact: profile.emergency_contact,
@@ -251,17 +311,19 @@ const getPatientDataById = async (req, res) => {
       currentMedications,
       diagnosis,
       notes,
-      createdBy: notes?.[0]?.created_by || null
+      createdBy: notes?.[0]?.created_by || null,
     };
 
     return res.status(200).json({
       success: true,
       message: "Patient data fetched successfully",
-      data: response
+      data: response,
     });
   } catch (error) {
     console.error("Error fetching patient data:", error);
-    res.status(500).json({ success: false, message: "Error in get patient data API" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error in get patient data API" });
   }
 };
 
@@ -308,25 +370,52 @@ const editPatientDataById = async (req, res) => {
       state = ?, country = ?, zip = ?, bp = ?, heart_rate = ?, temp = ?
     WHERE fk_userid = ?;
   `;
-  
-  const profileValues = [
-    firstName, middleName, lastName, birthDate, email, phone,
-    gender, ethnicity, lastVisit, emergencyContact,
-    height, weight, bmi, status,
-    addressLine1, addressLine2, city, state, country, zipCode,
-    bloodPressure, heartRate, temperature,
-    patientId // for WHERE clause
-  ];
+
+    const profileValues = [
+      firstName,
+      middleName,
+      lastName,
+      birthDate,
+      email,
+      phone,
+      gender,
+      ethnicity,
+      lastVisit,
+      emergencyContact,
+      height,
+      weight,
+      bmi,
+      status,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      country,
+      zipCode,
+      bloodPressure,
+      heartRate,
+      temperature,
+      patientId, // for WHERE clause
+    ];
     await connection.query(profileQuery, profileValues);
 
     // 2. Update users table (username = email)
-    await connection.query(`UPDATE users SET username = ? WHERE user_id = ?`, [email, patientId]);
+    await connection.query(`UPDATE users SET username = ? WHERE user_id = ?`, [
+      email,
+      patientId,
+    ]);
 
     // 3. Update allergies
     for (const allergy of allergies || []) {
       await connection.query(
         `UPDATE allergies SET category = ?, allergen = ?, reaction = ? WHERE id = ? AND patient_id = ?`,
-        [allergy.category, allergy.allergen, allergy.reaction, allergy.id, patientId]
+        [
+          allergy.category,
+          allergy.allergen,
+          allergy.reaction,
+          allergy.id,
+          patientId,
+        ]
       );
     }
 
@@ -338,9 +427,15 @@ const editPatientDataById = async (req, res) => {
           insurance_plan = ?, insurance_expiry = ?, insurance_type = ?, effective_date = ?
          WHERE patient_insurance_id = ? AND fk_userid = ?`,
         [
-          ins.policyNumber, ins.groupNumber, ins.company,
-          ins.plan, ins.expirationDate, ins.type, ins.effectiveDate,
-          ins.patient_insurance_id, patientId
+          ins.policyNumber,
+          ins.groupNumber,
+          ins.company,
+          ins.plan,
+          ins.expirationDate,
+          ins.type,
+          ins.effectiveDate,
+          ins.patient_insurance_id,
+          patientId,
         ]
       );
     }
@@ -352,8 +447,15 @@ const editPatientDataById = async (req, res) => {
           name = ?, dosage = ?, frequency = ?, prescribedBy = ?, startDate = ?, endDate = ?, status = ?
          WHERE id = ? AND patient_id = ?`,
         [
-          med.name, med.dosage, med.frequency, med.prescribedBy,
-          med.startDate, med.endDate, med.status, med.id, patientId
+          med.name,
+          med.dosage,
+          med.frequency,
+          med.prescribedBy,
+          med.startDate,
+          med.endDate,
+          med.status,
+          med.id,
+          patientId,
         ]
       );
     }
@@ -378,19 +480,23 @@ const editPatientDataById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Patient data updated successfully"
+      message: "Patient data updated successfully",
     });
-
   } catch (error) {
     console.error("Error updating patient data:", error);
-    res.status(500).json({ success: false, message: "Error in edit patient data API" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error in edit patient data API" });
   }
 };
 const getAllPatients = async (req, res) => {
- 
   try {
-    let { page = 1, limit = 10, order = "DESC", orderBy = "last_visit" } = req.query;
-console.log(req)
+    let {
+      page = 1,
+      limit = 10,
+      order = "DESC",
+      orderBy = "last_visit",
+    } = req.query;
     // Convert and sanitize inputs
     page = parseInt(page);
     limit = parseInt(limit);
@@ -398,8 +504,18 @@ console.log(req)
 
     // Safelist to avoid SQL injection on columns
     const allowedOrderBy = [
-      "firstname", "lastname", "dob", "gender", "ethnicity",
-      "last_visit", "height", "dry_weight", "bmi", "bp", "heart_rate", "temp"
+      "firstname",
+      "lastname",
+      "dob",
+      "gender",
+      "ethnicity",
+      "last_visit",
+      "height",
+      "dry_weight",
+      "bmi",
+      "bp",
+      "heart_rate",
+      "temp",
     ];
     const allowedOrder = ["ASC", "DESC"];
 
@@ -448,15 +564,14 @@ console.log(req)
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     });
-
   } catch (error) {
     console.error("Error fetching patients:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching patients"
+      message: "Error fetching patients",
     });
   }
 };
@@ -480,7 +595,8 @@ const getPatientMonitoringData = async (req, res) => {
     const stats = statsRows[0];
 
     // 2. Get paginated patient list
-    const [patients] = await connection.query(`
+    const [patients] = await connection.query(
+      `
     SELECT 
   fk_userid AS patientId,
   CONCAT_WS(' ', firstname, middlename, lastname) AS name,
@@ -502,7 +618,9 @@ const getPatientMonitoringData = async (req, res) => {
 FROM user_profiles
 ORDER BY last_visit DESC
 LIMIT ? OFFSET ?;
-    `, [limit, offset]);
+    `,
+      [limit, offset]
+    );
 
     return res.status(200).json({
       success: true,
@@ -511,22 +629,116 @@ LIMIT ? OFFSET ?;
         total: stats.total,
         critical: stats.critical,
         abnormal: stats.abnormal,
-        normal: stats.normal
+        normal: stats.normal,
       },
       patients,
       pagination: {
         total: stats.total,
         page,
         limit,
-        totalPages: Math.ceil(stats.total / limit)
-      }
+        totalPages: Math.ceil(stats.total / limit),
+      },
     });
-
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
     res.status(500).json({
       success: false,
-      message: "Internal Server Error"
+      message: "Internal Server Error",
+    });
+  }
+};
+
+const getPatientByPhoneNumber = async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const query = "SELECT fk_userid AS patientId,firstname, middlename, lastname,dob AS birthDate,work_email AS email,phone,gender,ethnicity,last_visit AS lastVisit,emergency_contact AS emergencyContact, FROM user_profiles WHERE phone = ?";
+    const [rows] = await connection.query(query, [phone]);
+    return res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+const getPatientTaskDetails = async (req, res) => {
+  try {
+
+    const [tasksCategories] = await connection.query('SELECT * FROM `tasks_category`');
+    const [tasksSubCategories] = await connection.query('SELECT tasks_sub_category_id, tasks_sub_category_name FROM `tasks_sub_category`');
+    const [taskActions] = await connection.query('SELECT task_action_id, task_action FROM `task_action`');
+    const [taskResults] = await connection.query('SELECT task_result_id, task_result FROM `task_result`');
+    const [taskTypes] = await connection.query('SELECT task_type_id, task_type FROM `task_types`');
+
+
+    res.status(200).json({
+      success: true,
+      tasksCategories,
+      tasksSubCategories,
+      taskActions,
+      taskResults,
+      taskTypes
+    });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal Server Error',
+      error: error.message
+    });
+  }
+};
+
+
+const addPatientTask = async (req, res) => {
+  const {
+    task_category_id,
+    task_sub_category_id,
+    task_action_id,
+    task_result_id,
+    task_type_id,
+    created_by,
+    assigned_to
+  } = req.body;
+
+  try {
+    const connection = await pool.getConnection();
+
+    const sql = `
+      INSERT INTO tasks (
+        task_category_id, task_sub_category_id, task_action_id, 
+        task_result_id, task_type_id, created_by, assigned_to
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+    const values = [
+      task_category_id,
+      task_sub_category_id,
+      task_action_id,
+      task_result_id,
+      task_type_id,
+      created_by,
+      assigned_to
+    ];
+
+    const [result] = await connection.query(sql, values);
+    connection.release();
+
+    res.status(200).json({
+      success: true,
+      message: 'Task inserted successfully',
+      task_id: result.insertId
+    });
+
+  } catch (error) {
+    console.error('Insert error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to insert task',
+      error: error.message
     });
   }
 };
@@ -537,5 +749,8 @@ module.exports = {
   getPatientDataById,
   editPatientDataById,
   getAllPatients,
-  getPatientMonitoringData
+  getPatientMonitoringData,
+  getPatientByPhoneNumber,
+  getPatientTaskDetails,
+  addPatientTask
 };

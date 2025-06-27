@@ -1,8 +1,8 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 
-exports.verifyToken = (req, res, next) => {
+exports.verifyToken = async (req, res, next) => {
   try {
-    // Get the token from Authorization header (format: Bearer <token>)
+    // Get the token from Authorization header
     const authHeader = req.header("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ success: false, message: "Authorization token missing or invalid" });
@@ -10,13 +10,25 @@ exports.verifyToken = (req, res, next) => {
 
     const token = authHeader.replace("Bearer ", "").trim();
 
-    // Verify token
+    // Fetch token from DB (optional check for logout/invalidation)
+    const [rows] = await connection.query(
+      "SELECT * FROM user_tokens WHERE token = ?",
+      [token]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, message: "Invalid token" });
+    }
+
+    // Verify token and check expiration
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
+        if (err.name === "TokenExpiredError") {
+          return res.status(403).json({ success: false, message: "Token expired" });
+        }
         return res.status(403).json({ success: false, message: "Token verification failed" });
       }
 
-      // Attach decoded data to request (e.g., user ID or role)
       req.user = decoded;
       next();
     });
