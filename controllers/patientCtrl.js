@@ -212,14 +212,40 @@ const getPatientDataById = async (req, res) => {
 
     // Get user profile
     const [profileRows] = await connection.query(
-      `SELECT *,CASE status
-    WHEN 1 THEN 'Critical'
-    WHEN 2 THEN 'Abnormal'
-    WHEN 3 THEN 'Normal'
-    ELSE 'NA'
-  END AS status FROM user_profiles WHERE fk_userid = ?`,
+      `SELECT 
+    firstname,
+    middlename,
+    lastname,
+    work_email,
+    phone,
+    gender,
+    address_line,
+    address_line_2,
+    city,
+    state,
+    country,
+    zip,
+    dob,
+    last_visit,
+    emergency_contact,
+    ethnicity,
+    height,
+    dry_weight,
+    bmi,
+    bp,
+    heart_rate,
+    temp,
+    CASE (status)
+      WHEN 1 THEN 'Critical'
+      WHEN 2 THEN 'Abnormal'
+      WHEN 3 THEN 'Normal'
+      ELSE 'NA'
+    END AS status
+  FROM user_profiles 
+  WHERE fk_userid = ?`,
       [patientId]
     );
+
     const profile = profileRows[0];
 
     // Get user login/email info
@@ -282,6 +308,7 @@ const getPatientDataById = async (req, res) => {
     );
 
     // Compose full response
+    console.log(profile)
     const response = {
       firstName: profile.firstname,
       middleName: profile.middlename,
@@ -405,78 +432,136 @@ const editPatientDataById = async (req, res) => {
       patientId,
     ]);
 
-    // 3. Update allergies
-    for (const allergy of allergies || []) {
-      await connection.query(
-        `UPDATE allergies SET category = ?, allergen = ?, reaction = ? WHERE id = ? AND patient_id = ?`,
-        [
-          allergy.category,
-          allergy.allergen,
-          allergy.reaction,
-          allergy.id,
-          patientId,
-        ]
-      );
-    }
 
-    // 4. Update insurance
-    for (const ins of insurance || []) {
-      await connection.query(
-        `UPDATE patient_insurances SET 
-          insurance_policy_number = ?, insurance_group_number = ?, insurance_company = ?,
-          insurance_plan = ?, insurance_expiry = ?, insurance_type = ?, effective_date = ?
-         WHERE patient_insurance_id = ? AND fk_userid = ?`,
-        [
-          ins.policyNumber,
-          ins.groupNumber,
-          ins.company,
-          ins.plan,
-          ins.expirationDate,
-          ins.type,
-          ins.effectiveDate,
-          ins.patient_insurance_id,
-          patientId,
-        ]
-      );
-    }
 
-    // 5. Update medications
-    for (const med of currentMedications || []) {
-      await connection.query(
-        `UPDATE patient_medication SET
-          name = ?, dosage = ?, frequency = ?, prescribedBy = ?, startDate = ?, endDate = ?, status = ?
-         WHERE id = ? AND patient_id = ?`,
-        [
-          med.name,
-          med.dosage,
-          med.frequency,
-          med.prescribedBy,
-          med.startDate,
-          med.endDate,
-          med.status,
-          med.id,
-          patientId,
-        ]
-      );
-    }
+
+
+
+
 
     // 6. Update diagnosis
     for (const diag of diagnosis || []) {
-      await connection.query(
-        `UPDATE patient_diagnoses SET
-          date = ?, icd10 = ?, diagnosis = ?, status = ?
-         WHERE id = ? AND patient_id = ?`,
-        [diag.date, diag.icd10, diag.diagnosis, diag.status, diag.id, patientId]
-      );
+      console.log("Processing diagnosis entry:", diag);
+
+      if (diag.id) {
+        const [updateResult] = await connection.query(
+          `UPDATE patient_diagnoses SET date = ?, icd10 = ?, diagnosis = ?, status = ? WHERE id = ? AND patient_id = ?`,
+          [diag.date, diag.icd10, diag.diagnosis, diag.status, diag.id, patientId]
+        );
+        console.log("Update Result for ID:", diag.id, updateResult);
+      } else {
+        const [insertResult] = await connection.query(
+          `INSERT INTO patient_diagnoses (date, icd10, diagnosis, status, patient_id) VALUES (?, ?, ?, ?, ?)`,
+          [diag.date, diag.icd10, diag.diagnosis, diag.status, patientId]
+        );
+        console.log("Inserted new diagnosis with result:", insertResult);
+      }
     }
 
-    // 7. Update notes
-    for (const note of notes || []) {
-      await connection.query(
-        `UPDATE notes SET note = ? WHERE note_id = ? AND patient_id = ?`,
-        [note.note, note.note_id, patientId]
-      );
+
+
+
+    // 1. Allergies
+    for (const allergy of allergies || []) {
+      console.log("Processing allergy:", allergy);
+
+      if (allergy.id) {
+        const [result] = await connection.query(
+          `UPDATE allergies SET category = ?, allergen = ?, reaction = ? WHERE id = ? AND patient_id = ?`,
+          [allergy.category, allergy.allergen, allergy.reaction, allergy.id, patientId]
+        );
+        console.log("Updated allergy ID:", allergy.id, result);
+      } else {
+        const [result] = await connection.query(
+          `INSERT INTO allergies (category, allergen, reaction, patient_id) VALUES (?, ?, ?, ?)`,
+          [allergy.category, allergy.allergen, allergy.reaction, patientId]
+        );
+        console.log("Inserted new allergy:", result);
+      }
     }
+
+    // 2. Insurance
+    for (const ins of insurance || []) {
+      console.log("Processing insurance:", ins);
+
+      if (ins.patient_insurance_id) {
+        const [result] = await connection.query(
+          `UPDATE patient_insurances SET 
+        insurance_policy_number = ?, insurance_group_number = ?, insurance_company = ?,
+        insurance_plan = ?, insurance_expiry = ?, insurance_type = ?, effective_date = ?
+       WHERE patient_insurance_id = ? AND fk_userid = ?`,
+          [
+            ins.policyNumber, ins.groupNumber, ins.company,
+            ins.plan, ins.expirationDate, ins.type, ins.effectiveDate,
+            ins.patient_insurance_id, patientId
+          ]
+        );
+        console.log("Updated insurance ID:", ins.patient_insurance_id, result);
+      } else {
+        const [result] = await connection.query(
+          `INSERT INTO patient_insurances (
+        insurance_policy_number, insurance_group_number, insurance_company,
+        insurance_plan, insurance_expiry, insurance_type, effective_date, fk_userid
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            ins.policyNumber, ins.groupNumber, ins.company,
+            ins.plan, ins.expirationDate, ins.type, ins.effectiveDate,
+            patientId
+          ]
+        );
+        console.log("Inserted new insurance:", result);
+      }
+    }
+
+    // 3. Medications
+    for (const med of currentMedications || []) {
+      console.log("Processing medication:", med);
+
+      if (med.id) {
+        const [result] = await connection.query(
+          `UPDATE patient_medication SET
+        name = ?, dosage = ?, frequency = ?, prescribedBy = ?, startDate = ?, endDate = ?, status = ?
+       WHERE id = ? AND patient_id = ?`,
+          [
+            med.name, med.dosage, med.frequency, med.prescribedBy,
+            med.startDate, med.endDate, med.status, med.id, patientId
+          ]
+        );
+        console.log("Updated medication ID:", med.id, result);
+      } else {
+        const [result] = await connection.query(
+          `INSERT INTO patient_medication (
+        name, dosage, frequency, prescribedBy, startDate, endDate, status, patient_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            med.name, med.dosage, med.frequency, med.prescribedBy,
+            med.startDate, med.endDate, med.status, patientId
+          ]
+        );
+        console.log("Inserted new medication:", result);
+      }
+    }
+
+    // 4. Notes
+    for (const note of notes || []) {
+      console.log("Processing note:", note);
+
+      if (note.note_id) {
+        const [result] = await connection.query(
+          `UPDATE notes SET note = ? WHERE note_id = ? AND patient_id = ?`,
+          [note.note, note.note_id, patientId]
+        );
+        console.log("Updated note ID:", note.note_id, result);
+      } else {
+        const [result] = await connection.query(
+          `INSERT INTO notes (note, patient_id, created, created_by) VALUES (?, ?, ?, ?)`,
+          [note.note, patientId, note.created, note.created_by || null]
+        );
+        console.log("Inserted new note:", result);
+      }
+    }
+
+
 
     return res.status(200).json({
       success: true,
@@ -491,12 +576,8 @@ const editPatientDataById = async (req, res) => {
 };
 const getAllPatients = async (req, res) => {
   try {
-    let {
-      page = 1,
-      limit = 10,
-      order = "DESC",
-      orderBy = "last_visit",
-    } = req.query;
+    let { page = 1, limit = 10, order = "DESC", orderBy = "last_visit" } = req.query;
+    // console.log(req)
     // Convert and sanitize inputs
     page = parseInt(page);
     limit = parseInt(limit);
@@ -578,7 +659,7 @@ const getAllPatients = async (req, res) => {
 
 const getPatientMonitoringData = async (req, res) => {
   try {
-    let { page = 1, limit = 25 } = req.query;
+    let { page = 1, limit = 250000 } = req.query;
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
@@ -648,23 +729,7 @@ LIMIT ? OFFSET ?;
   }
 };
 
-const getPatientByPhoneNumber = async (req, res) => {
-  try {
-    const { phone } = req.params;
-    const query = "SELECT fk_userid AS patientId,firstname, middlename, lastname,dob AS birthDate,work_email AS email,phone,gender,ethnicity,last_visit AS lastVisit,emergency_contact AS emergencyContact, FROM user_profiles WHERE phone = ?";
-    const [rows] = await connection.query(query, [phone]);
-    return res.status(200).json({
-      success: true,
-      data: rows,
-    });
-  } catch (error) {
-    console.error("Database error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
-}
+
 const getPatientTaskDetails = async (req, res) => {
   try {
 
@@ -742,6 +807,49 @@ const addPatientTask = async (req, res) => {
     });
   }
 };
+
+
+const getPatientByPhoneNumber = async (req, res) => {
+  try {
+    let { phone } = req.query;
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Phone number is required" });
+    }
+
+    // Normalize input (strip +91, +1, 0)
+    phone = phone.replace(/^(\+91|\+1|0)/, '');
+
+    const query = `
+      SELECT fk_userid AS patientId,
+             firstname, 
+             middlename, 
+             lastname,
+             dob AS birthDate,
+             work_email AS email,
+             phone,
+             gender,
+             ethnicity,
+             last_visit AS lastVisit,
+             emergency_contact AS emergencyContact
+      FROM user_profiles 
+      WHERE phone LIKE ?
+    `;
+
+    const [rows] = await connection.query(query, [`%${phone}`]); // match from end
+
+    return res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
 
 
 module.exports = {

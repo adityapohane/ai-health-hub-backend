@@ -6,10 +6,10 @@ const router = express.Router()
 
 router.post("/create", addPatient);
 router.post("/getPatientDataById", getPatientDataById);
+router.post("/getPatientByPhoneNumber", getPatientByPhoneNumber);
 router.post("/editPatientDataById", editPatientDataById);
 router.get("/getAllPatients", getAllPatients);
 router.get("/getPatientMonitoringData", getPatientMonitoringData);
-router.get("/getPatientByPhoneNumber", getPatientByPhoneNumber);
 router.get("/getPatientTaskDetails", getPatientTaskDetails);
 router.post("/addPatientTask", addPatientTask);
 
