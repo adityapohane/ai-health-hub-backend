@@ -8,6 +8,6 @@ const router = express.Router();
 
 router.get("/allOrganizations", getAllOrganizations);
 router.get("/allPractices", getAllPractices);
-router.get("/updatePhysicianMappings", updateUserMapping);
+router.post("/updatePhysicianMappings", updateUserMapping);
 
 module.exports = router;
