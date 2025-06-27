@@ -760,37 +760,71 @@ const getPatientTaskDetails = async (req, res) => {
 
 
 const addPatientTask = async (req, res) => {
+  // const {
+  //   taskTitle,
+  //   taskCategory,
+  //   taskSubCategory,
+  //   taskAction,
+  //   taskResult,
+  //   taskType,
+  //   createdBy,
+  //   assignedTo,
+  // } = req.body;
   const {
-    task_category_id,
-    task_sub_category_id,
-    task_action_id,
-    task_result_id,
-    task_type_id,
-    created_by,
-    assigned_to
-  } = req.body;
+    taskTitle,
+    taskCategory,
+    taskSubCategory,
+    taskAction,
+    taskResult,
+    taskType,
+    createdBy,
+    assignedTo,
+    patientId,
+    taskStatus,
+    taskDescription,
+    taskPriority,
+    dueDate,
+    taskNotes,
+  } = { ...req.body, ...req.params };
 
   try {
-    const connection = await pool.getConnection();
 
     const sql = `
-      INSERT INTO tasks (
-        task_category_id, task_sub_category_id, task_action_id, 
-        task_result_id, task_type_id, created_by, assigned_to
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    INSERT INTO tasks (
+      task_title,
+      fk_category_id,
+      fk_sub_category_id,
+      fk_task_action,
+      fk_task_result,
+      fk_task_type,
+      created_by,
+      assigned_to_id,
+      patient_id,
+      status,
+      task_description,
+      priority,
+      due_date,
+      task_notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     const values = [
-      task_category_id,
-      task_sub_category_id,
-      task_action_id,
-      task_result_id,
-      task_type_id,
-      created_by,
-      assigned_to
+      taskTitle,
+      taskCategory,
+      taskSubCategory,
+      taskAction,
+      taskResult,
+      taskType,
+      createdBy,
+      assignedTo,
+      patientId,
+      taskStatus === "completed" ? 1 : 0,
+      taskDescription,
+      taskPriority,
+      dueDate,
+      taskNotes
     ];
 
     const [result] = await connection.query(sql, values);
-    connection.release();
 
     res.status(200).json({
       success: true,
