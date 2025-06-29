@@ -1,7 +1,7 @@
 const express = require("express")
+const router = express.Router()
 const { addPatient, getPatientDataById, editPatientDataById, getAllPatients, getPatientMonitoringData, getPatientByPhoneNumber, getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask } = require("../controllers/patientCtrl")
 const { resetPasswordTokenCtrl, resetPasswordCtrl } = require("../controllers/resetPasswordCtrl")
-const router = express.Router()
 
 
 router.post("/create", addPatient);

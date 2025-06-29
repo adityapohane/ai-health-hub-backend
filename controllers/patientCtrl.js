@@ -630,20 +630,21 @@ const getAllPatients = async (req, res) => {
         up.address_line AS address
       FROM user_profiles up
       JOIN users u ON up.fk_userid = u.user_id
-      WHERE u.fk_roleid = 6
       ORDER BY ${orderBy} ${order}
       LIMIT ? OFFSET ?`,
       [limit, offset]
     );
+//       WHERE u.fk_roleid = 6
 
     // Count total patients with fk_roleid = 7
     const [[{ total }]] = await connection.query(
       `SELECT COUNT(*) AS total
        FROM user_profiles up
-       JOIN users u ON up.fk_userid = u.user_id
-       WHERE u.fk_roleid = 6`
+       JOIN users u ON up.fk_userid = u.user_id`
     );
 
+
+    // WHERE u.fk_roleid = 6
     return res.status(200).json({
       success: true,
       message: "Patients fetched successfully",
