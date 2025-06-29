@@ -29,7 +29,6 @@ const addPatient = async (req, res) => {
       currentMedications,
       diagnosis,
       notes,
-      providerId,
       addressLine1,
       addressLine2,
       city,
@@ -43,8 +42,8 @@ const addPatient = async (req, res) => {
     let password = `${firstName}@hub`;
     const hashedPassword = await bcrypt.hash(password, 10);
     const insertQuery =
-      "INSERT INTO users (username, password,fk_roleid) VALUES (?, ?,6)";
-    const userValue = [email, hashedPassword];
+      "INSERT INTO users (username, password,fk_roleid,created_user_id) VALUES (?, ?,7,?)";
+    const userValue = [email, hashedPassword, providerid];
     const [result] = await connection.query(insertQuery, userValue);
     const insertedId = result.insertId;
 
@@ -171,7 +170,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   created_by
 ) VALUES (?, ?, ?);`;
     notes?.map(async (note) => {
-      const values6 = [insertedId, note.note, providerId];
+      const values6 = [insertedId, note.note, providerid];
       const [noteResult] = await connection.query(sql6, values6);
     });
 
@@ -307,10 +306,9 @@ const getPatientDataById = async (req, res) => {
       `SELECT note, created, created_by ,note_id FROM notes WHERE patient_id = ?`,
       [patientId]
     );
-// console.log(profile)
+
     // Compose full response
     const response = {
-      patientId:patientId,
       firstName: profile.firstname,
       middleName: profile.middlename,
       lastName: profile.lastname,
@@ -322,7 +320,6 @@ const getPatientDataById = async (req, res) => {
       addressLine2: profile.address_line_2,
       city: profile.city,
       state: profile.state,
-      condition:profile.patient_condition,
       country: profile.country,
       zipCode: profile.zip,
       birthDate: profile.dob,
@@ -585,6 +582,7 @@ const getAllPatients = async (req, res) => {
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
+    const { roleid, providerid } = req.headers;
 
     const allowedOrderBy = [
       "firstname",
@@ -630,6 +628,7 @@ const getAllPatients = async (req, res) => {
         up.address_line AS address
       FROM user_profiles up
       JOIN users u ON up.fk_userid = u.user_id
+      WHERE u.fk_roleid = 6
       ORDER BY ${orderBy} ${order}
       LIMIT ? OFFSET ?`,
       [limit, offset]
@@ -640,7 +639,8 @@ const getAllPatients = async (req, res) => {
     const [[{ total }]] = await connection.query(
       `SELECT COUNT(*) AS total
        FROM user_profiles up
-       JOIN users u ON up.fk_userid = u.user_id`
+       JOIN users u ON up.fk_userid = u.user_id
+       WHERE u.fk_roleid = 6`
     );
 
 

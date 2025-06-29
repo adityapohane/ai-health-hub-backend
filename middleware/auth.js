@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-const connection = require("../config/db");
-
+const connection = require('../config/db');
 
 exports.verifyToken = async (req, res, next) => {
   try {
@@ -11,13 +10,12 @@ exports.verifyToken = async (req, res, next) => {
     }
 
     const token = authHeader.replace("Bearer ", "").trim();
-
-    console.log(token)
+    // console.log(token)
     // Fetch token from DB (optional check for logout/invalidation)
-    // const [rows] = await connection.query(
-    //   "SELECT * FROM user_tokens WHERE token = ?",
-    //   [token]
-    // );
+    const [rows] = await connection.query(
+      "SELECT * FROM users WHERE user_token = ?",
+      [token]
+    );
 
     // if (rows.length === 0) {
     //   return res.status(401).json({ success: false, message: "Invalid token" });

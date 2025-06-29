@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // Import all route files
 const authRoutes = require('./authRoute');
@@ -16,18 +16,18 @@ router.use('/ring-central', ringCentralRoute);
 router.use('/aws', awsRoute);
 
 // Protected routes (require auth)
-router.use('/patient', patientRoutes);
-router.use('/settings', settingsRoutes);
-router.use('/physician', providerRoutes);
+router.use('/patient', verifyToken, patientRoutes);
+router.use('/settings', verifyToken, settingsRoutes);
+router.use('/physician', verifyToken, providerRoutes);
 router.get('/health', (req, res) => {
-        res.json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-            environment: process.env.NODE_ENV || 'development',
-            message: 'Server is running and responding'
-        });
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        message: 'Server is running and responding'
     });
+});
 
 
 // Export the combined router

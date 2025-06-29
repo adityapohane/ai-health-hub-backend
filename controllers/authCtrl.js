@@ -8,7 +8,7 @@ const registerCtrl = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
-    if (!firstName || !lastName || !email || !password ) {
+    if (!firstName || !lastName || !email || !password) {
       return res.status(403).send({
         success: false,
         message: "All required fields must be filled",
@@ -35,7 +35,7 @@ const registerCtrl = async (req, res) => {
     const insertedId = result.insertId;
 
     const insertUserProfileQuery = "INSERT INTO user_profiles (firstname,lastname,work_email,fk_userid) VALUES (?,?,?,?)";
-    const userValues = [firstName,lastName,email,insertedId];
+    const userValues = [firstName, lastName, email, insertedId];
     const [userResult] = await connection.query(insertUserProfileQuery, userValues);
 
 
@@ -56,7 +56,7 @@ const loginCtrl = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password ) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
         message: "Please fill in all required fields.",
@@ -66,7 +66,7 @@ const loginCtrl = async (req, res) => {
 
     let userQuery = `SELECT u.*, up.firstname, up.lastname, up.work_email FROM users u LEFT JOIN user_profiles up ON up.fk_userid = u.user_id WHERE u.username = ?`;
     const [rows] = await connection.query(userQuery, [email]);
-    
+
 
 
     if (rows.length === 0) {
@@ -95,14 +95,14 @@ const loginCtrl = async (req, res) => {
     const result = await connection.query(updateQ, [token, user.user_id]);
     res.status(200).json({
       success: true,
-      token, 
-  user: {
-    id: user.user_id,
-    firstname: user.firstname,
-    lastname: user.lastname,
-    email: user.username,
-    role: user.fk_roleid,
-  },
+      token,
+      user: {
+        id: user.user_id,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        email: user.username,
+        role: user.fk_roleid,
+      },
 
       message: "User login successful.",
     });
