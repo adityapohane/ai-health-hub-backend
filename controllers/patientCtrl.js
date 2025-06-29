@@ -233,6 +233,7 @@ const getPatientDataById = async (req, res) => {
     dry_weight,
     bmi,
     bp,
+    patient_condition,
     heart_rate,
     temp,
     CASE (status)
@@ -306,9 +307,10 @@ const getPatientDataById = async (req, res) => {
       `SELECT note, created, created_by ,note_id FROM notes WHERE patient_id = ?`,
       [patientId]
     );
-
+// console.log(profile)
     // Compose full response
     const response = {
+      patientId:patientId,
       firstName: profile.firstname,
       middleName: profile.middlename,
       lastName: profile.lastname,
@@ -320,6 +322,7 @@ const getPatientDataById = async (req, res) => {
       addressLine2: profile.address_line_2,
       city: profile.city,
       state: profile.state,
+      condition:profile.patient_condition,
       country: profile.country,
       zipCode: profile.zip,
       birthDate: profile.dob,
@@ -573,16 +576,16 @@ const editPatientDataById = async (req, res) => {
       .json({ success: false, message: "Error in edit patient data API" });
   }
 };
+
+
 const getAllPatients = async (req, res) => {
   try {
     let { page = 1, limit = 10, order = "DESC", orderBy = "last_visit" } = req.query;
-    // console.log(req)
-    // Convert and sanitize inputs
+
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
 
-    // Safelist to avoid SQL injection on columns
     const allowedOrderBy = [
       "firstname",
       "lastname",
@@ -602,38 +605,43 @@ const getAllPatients = async (req, res) => {
     if (!allowedOrderBy.includes(orderBy)) orderBy = "last_visit";
     if (!allowedOrder.includes(order.toUpperCase())) order = "DESC";
 
-    // Fetch paginated patient data
+    // Fetch patient data by joining users and user_profiles, filtering on fk_roleid = 7
     const [patients] = await connection.query(
       `SELECT 
-        fk_userid AS patientId,
-        firstname, middlename, lastname,
-        dob AS birthDate,
-        work_email AS email,
-        phone,
-        gender,
-        ethnicity,
-        last_visit AS lastVisit,
-        emergency_contact AS emergencyContact,
-        height, dry_weight AS weight, bmi,
-        bp AS bloodPressure,
-        heart_rate AS heartRate,
-        temp AS temperature,
-        CASE status
-    WHEN 1 THEN 'Critical'
-    WHEN 2 THEN 'Abnormal'
-    WHEN 3 THEN 'Normal'
-    ELSE 'NA'
-  END AS status,
-        address_line AS address
-      FROM user_profiles
+        up.fk_userid AS patientId,
+        up.firstname, up.middlename, up.lastname,
+        up.dob AS birthDate,
+        up.work_email AS email,
+        up.phone,
+        up.gender,
+        up.ethnicity,
+        up.last_visit AS lastVisit,
+        up.emergency_contact AS emergencyContact,
+        up.height, up.dry_weight AS weight, up.bmi,
+        up.bp AS bloodPressure,
+        up.heart_rate AS heartRate,
+        up.temp AS temperature,
+        CASE up.status
+          WHEN 1 THEN 'Critical'
+          WHEN 2 THEN 'Abnormal'
+          WHEN 3 THEN 'Normal'
+          ELSE 'NA'
+        END AS status,
+        up.address_line AS address
+      FROM user_profiles up
+      JOIN users u ON up.fk_userid = u.user_id
+      WHERE u.fk_roleid = 6
       ORDER BY ${orderBy} ${order}
       LIMIT ? OFFSET ?`,
       [limit, offset]
     );
 
-    // Total count for pagination
+    // Count total patients with fk_roleid = 7
     const [[{ total }]] = await connection.query(
-      `SELECT COUNT(*) AS total FROM user_profiles`
+      `SELECT COUNT(*) AS total
+       FROM user_profiles up
+       JOIN users u ON up.fk_userid = u.user_id
+       WHERE u.fk_roleid = 6`
     );
 
     return res.status(200).json({
@@ -655,6 +663,8 @@ const getAllPatients = async (req, res) => {
     });
   }
 };
+
+
 
 const getPatientMonitoringData = async (req, res) => {
   try {
@@ -759,68 +769,58 @@ const getPatientTaskDetails = async (req, res) => {
 
 
 const addPatientTask = async (req, res) => {
-  // const {
-  //   taskTitle,
-  //   taskCategory,
-  //   taskSubCategory,
-  //   taskAction,
-  //   taskResult,
-  //   taskType,
-  //   createdBy,
-  //   assignedTo,
-  // } = req.body;
   const {
-    taskTitle,
-    taskCategory,
-    taskSubCategory,
-    taskAction,
-    taskResult,
-    taskType,
-    createdBy,
-    assignedTo,
-    patientId,
-    taskStatus,
-    taskDescription,
-    taskPriority,
-    dueDate,
-    taskNotes,
+    task_title,
+    tasks_category_name,
+    tasks_sub_category_name,
+    task_action,
+    task_result,
+    task_type,
+    created_by,
+    assigned_to_name,
+    patient_id = 1,
+    status,
+    task_description,
+    priority,
+    due_date,
+    task_notes,
   } = { ...req.body, ...req.query };
 
   try {
-
     const sql = `
-    INSERT INTO tasks (
+      INSERT INTO tasks (
+        task_title,
+        fk_category_id,
+        fk_sub_category_id,
+        fk_task_action,
+        fk_task_result,
+        fk_task_type,
+        created_by,
+        assigned_to_id,
+        patient_id,
+        status,
+        task_description,
+        priority,
+        due_date,
+        task_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
       task_title,
-      fk_category_id,
-      fk_sub_category_id,
-      fk_task_action,
-      fk_task_result,
-      fk_task_type,
+      tasks_category_name,
+      tasks_sub_category_name,
+      task_action,
+      task_result,
+      task_type,
       created_by,
-      assigned_to_id,
+      assigned_to_name, // this assumes it's the id; update if necessary
       patient_id,
-      status,
+      status === "completed" ? 1 : 0,
       task_description,
       priority,
       due_date,
       task_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    const values = [
-      taskTitle,
-      taskCategory,
-      taskSubCategory,
-      taskAction,
-      taskResult,
-      taskType,
-      createdBy,
-      assignedTo,
-      patientId,
-      taskStatus === "completed" ? 1 : 0,
-      taskDescription,
-      taskPriority,
-      dueDate,
-      taskNotes
     ];
 
     const [result] = await connection.query(sql, values);
@@ -840,23 +840,15 @@ const addPatientTask = async (req, res) => {
     });
   }
 };
+
+
+
+
+
 const getAllPatientTasks = async (req, res) => {
-  // const {
-  //   taskTitle,
-  //   taskCategory,
-  //   taskSubCategory,
-  //   taskAction,
-  //   taskResult,
-  //   taskType,
-  //   createdBy,
-  //   assignedTo,
-  // } = req.body;
-  const {
-    patientId
-  } = req.query;
+  const { patientId } = req.query;
 
   try {
-
     const [taskDetails] = await connection.query(`
       SELECT 
         t.id,
@@ -881,25 +873,32 @@ const getAllPatientTasks = async (req, res) => {
         ty.task_type,
         ty.task_type_id,
         CONCAT(up.firstname," ",up.lastname) AS assigned_to_name
-
       FROM tasks t
       LEFT JOIN tasks_category c ON t.fk_category_id = c.tasks_category_id
       LEFT JOIN tasks_sub_category sc ON t.fk_sub_category_id = sc.tasks_sub_category_id
       LEFT JOIN task_action a ON t.fk_task_action = a.task_action_id
       LEFT JOIN task_result r ON t.fk_task_result = r.task_result_id
       LEFT JOIN task_types ty ON t.fk_task_type = ty.task_type_id
-        LEFT JOIN user_profiles up ON t.assigned_to_id = up.fk_userid
+      LEFT JOIN user_profiles up ON t.assigned_to_id = up.fk_userid
       WHERE t.patient_id = ?
     `, [patientId]);
 
+    if (!taskDetails || taskDetails.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: 'No task is available for this patient',
+        task_id: []
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Task inserted successfully',
+      message: 'Tasks fetched successfully',
       task_id: taskDetails
     });
 
   } catch (error) {
-    console.error('Insert error:', error);
+    console.error('Fetch error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch tasks',
@@ -907,6 +906,7 @@ const getAllPatientTasks = async (req, res) => {
     });
   }
 };
+
 
 
 const getPatientByPhoneNumber = async (req, res) => {
@@ -949,6 +949,9 @@ const getPatientByPhoneNumber = async (req, res) => {
     });
   }
 };
+
+
+
 const editPatientTask = async (req, res) => {
   const {
     taskTitle,
