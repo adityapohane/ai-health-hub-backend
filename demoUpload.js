@@ -2,7 +2,7 @@ const uploadFileToS3 = require("./utils/s3Upload.js");
 
 (async () => {
   try {
-    const uploadedUrl = await uploadFileToS3(
+     const uploadedUrl = await uploadFileToS3(
       "./demo-upload.pdf",
       "varn-dev",
       "common-use/firstcareplan.pdf"

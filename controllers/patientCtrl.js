@@ -208,7 +208,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 const getPatientDataById = async (req, res) => {
   try {
     const { patientId } = req.query;
-
+// console.log(patientId)
     // Get user profile
     const [profileRows] = await connection.query(
       `SELECT 
@@ -603,50 +603,46 @@ const getAllPatients = async (req, res) => {
     if (!allowedOrderBy.includes(orderBy)) orderBy = "last_visit";
     if (!allowedOrder.includes(order.toUpperCase())) order = "DESC";
 
-    // Fetch paginated patient data
-    let getAllQ = `SELECT 
-        fk_userid AS patientId,
-        firstname, middlename, lastname,
-        dob AS birthDate,
-        work_email AS email,
-        phone,
-        gender,
-        ethnicity,
-        last_visit AS lastVisit,
-        emergency_contact AS emergencyContact,
-        height, dry_weight AS weight, bmi,
-        bp AS bloodPressure,
-        heart_rate AS heartRate,
-        temp AS temperature,
-        CASE status
-    WHEN 1 THEN 'Critical'
-    WHEN 2 THEN 'Abnormal'
-    WHEN 3 THEN 'Normal'
-    ELSE 'NA'
-  END AS status,
-        address_line AS address
-      FROM user_profiles`
-      + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
-    if (roleid == 6) {
-      getAllQ += ` AND users_mappings.fk_physician_id = ${providerid}`;
-    }
-    getAllQ += ` GROUP BY users_mappings.user_id ORDER BY ${orderBy} ${order}
-      LIMIT ${limit} OFFSET ${offset}`;
-
+    // Fetch patient data by joining users and user_profiles, filtering on fk_roleid = 7
     const [patients] = await connection.query(
-      getAllQ
+      `SELECT 
+        up.fk_userid AS patientId,
+        up.firstname, up.middlename, up.lastname,
+        up.dob AS birthDate,
+        up.work_email AS email,
+        up.phone,
+        up.gender,
+        up.ethnicity,
+        up.last_visit AS lastVisit,
+        up.emergency_contact AS emergencyContact,
+        up.height, up.dry_weight AS weight, up.bmi,
+        up.bp AS bloodPressure,
+        up.heart_rate AS heartRate,
+        up.temp AS temperature,
+        CASE up.status
+          WHEN 1 THEN 'Critical'
+          WHEN 2 THEN 'Abnormal'
+          WHEN 3 THEN 'Normal'
+          ELSE 'NA'
+        END AS status,
+        up.address_line AS address
+      FROM user_profiles up
+      JOIN users u ON up.fk_userid = u.user_id
+        ORDER BY ${orderBy} ${order}
+      LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+//       WHERE u.fk_roleid = 6
+
+    // Count total patients with fk_roleid = 7
+    const [[{ total }]] = await connection.query(
+      `SELECT COUNT(*) AS total
+       FROM user_profiles up
+       JOIN users u ON up.fk_userid = u.user_id`
     );
 
-    // Total count for pagination
-    let countQ = ``
-    if (roleid == 6) {
-      countQ += ` SELECT COUNT(*) AS total FROM user_profiles LEFT JOIN users_mappings ON users_mappings.user_id = user_profiles.fk_userid WHERE users_mappings.fk_physician_id = ${providerid} GROUP BY users_mappings.user_id;`;
-    } else {
-      countQ = `SELECT COUNT(*) AS total FROM user_profiles GROUP BY user_profiles.fk_userid;`
-    }
-    console.log(countQ)
-    const [[{ total }]] = await connection.query(countQ);
 
+    // WHERE u.fk_roleid = 6
     return res.status(200).json({
       success: true,
       message: "Patients fetched successfully",
@@ -1012,6 +1008,30 @@ const editPatientTask = async (req, res) => {
 };
 
 
+const getPcmByPatientId = async (req, res) => {
+  const { patientId } = req.params;
+
+  try {
+    const [rows] = await connection.execute(
+      `SELECT * FROM healthhub.pcm_mappings WHERE patient = ? ORDER BY created DESC`,
+      [patientId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient document mappings fetched successfully',
+      data: rows
+    });
+  } catch (err) {
+    console.error('Error fetching mappings:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: err.message || err
+    });
+  }
+};
+
 module.exports = {
   addPatient,
   getPatientDataById,
@@ -1022,5 +1042,6 @@ module.exports = {
   getPatientTaskDetails,
   addPatientTask,
   getAllPatientTasks,
-  editPatientTask
+  editPatientTask,
+  getPcmByPatientId
 };

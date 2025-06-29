@@ -299,4 +299,9 @@ router.get('/get-all-user-modules', async (req, res) => {
         });
     }
 });
+
+router.post("/pdf-header", settingsCtrl.pdfHeaders);
+
+
+
 module.exports = router;

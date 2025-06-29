@@ -43,6 +43,32 @@ const createService = (key) => ({
   disable: (userId) => updateModule(userId, key, false),
 });
 
+
+
+
+
+const pdfHeaders = async (req, res) => {
+  try {
+    const { body } = req; // Access req.body directly, no need for `const {body} = req.body`
+    console.log(req.files.logo)
+    // console.log(req.file)
+    // Do something with `body` here
+    console.log("Request Body:", body);
+
+    res.status(200).json({
+      success: true,
+      message: "PDF headers processed successfully",
+      data: body, // Optional, depending on your logic
+    });
+  } catch (error) {
+    console.error("Internal error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
 // Export all services
 module.exports = {
   rpmService: createService("rpm"),
@@ -54,4 +80,5 @@ module.exports = {
   aiPhoneSystemService: createService("aiPhoneSystem"),
   patientOverviewService: createService("patientOverview"),
   getAllModules,
+  pdfHeaders
 };
