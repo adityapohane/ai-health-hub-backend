@@ -29,7 +29,6 @@ const addPatient = async (req, res) => {
       currentMedications,
       diagnosis,
       notes,
-      providerId,
       addressLine1,
       addressLine2,
       city,
@@ -43,8 +42,8 @@ const addPatient = async (req, res) => {
     let password = `${firstName}@hub`;
     const hashedPassword = await bcrypt.hash(password, 10);
     const insertQuery =
-      "INSERT INTO users (username, password,fk_roleid) VALUES (?, ?,6)";
-    const userValue = [email, hashedPassword];
+      "INSERT INTO users (username, password,fk_roleid,created_user_id) VALUES (?, ?,7,?)";
+    const userValue = [email, hashedPassword, providerid];
     const [result] = await connection.query(insertQuery, userValue);
     const insertedId = result.insertId;
 
@@ -171,7 +170,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   created_by
 ) VALUES (?, ?, ?);`;
     notes?.map(async (note) => {
-      const values6 = [insertedId, note.note, providerId];
+      const values6 = [insertedId, note.note, providerid];
       const [noteResult] = await connection.query(sql6, values6);
     });
 
@@ -581,6 +580,7 @@ const getAllPatients = async (req, res) => {
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
+    const { roleid, providerid } = req.headers;
 
     // Safelist to avoid SQL injection on columns
     const allowedOrderBy = [
@@ -603,8 +603,7 @@ const getAllPatients = async (req, res) => {
     if (!allowedOrder.includes(order.toUpperCase())) order = "DESC";
 
     // Fetch paginated patient data
-    const [patients] = await connection.query(
-      `SELECT 
+    let getAllQ = `SELECT 
         fk_userid AS patientId,
         firstname, middlename, lastname,
         dob AS birthDate,
@@ -625,16 +624,27 @@ const getAllPatients = async (req, res) => {
     ELSE 'NA'
   END AS status,
         address_line AS address
-      FROM user_profiles
-      ORDER BY ${orderBy} ${order}
-      LIMIT ? OFFSET ?`,
-      [limit, offset]
+      FROM user_profiles`
+      + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
+    if (roleid == 6) {
+      getAllQ += ` AND users_mappings.fk_physician_id = ${providerid}`;
+    }
+    getAllQ += ` GROUP BY users_mappings.user_id ORDER BY ${orderBy} ${order}
+      LIMIT ${limit} OFFSET ${offset}`;
+
+    const [patients] = await connection.query(
+      getAllQ
     );
 
     // Total count for pagination
-    const [[{ total }]] = await connection.query(
-      `SELECT COUNT(*) AS total FROM user_profiles`
-    );
+    let countQ = ``
+    if (roleid == 6) {
+      countQ += ` SELECT COUNT(*) AS total FROM user_profiles LEFT JOIN users_mappings ON users_mappings.user_id = user_profiles.fk_userid WHERE users_mappings.fk_physician_id = ${providerid} GROUP BY users_mappings.user_id;`;
+    } else {
+      countQ = `SELECT COUNT(*) AS total FROM user_profiles GROUP BY user_profiles.fk_userid;`
+    }
+    console.log(countQ)
+    const [[{ total }]] = await connection.query(countQ);
 
     return res.status(200).json({
       success: true,
