@@ -628,8 +628,7 @@ const getAllPatients = async (req, res) => {
         up.address_line AS address
       FROM user_profiles up
       JOIN users u ON up.fk_userid = u.user_id
-      WHERE u.fk_roleid = 6
-      ORDER BY ${orderBy} ${order}
+        ORDER BY ${orderBy} ${order}
       LIMIT ? OFFSET ?`,
       [limit, offset]
     );
@@ -639,8 +638,7 @@ const getAllPatients = async (req, res) => {
     const [[{ total }]] = await connection.query(
       `SELECT COUNT(*) AS total
        FROM user_profiles up
-       JOIN users u ON up.fk_userid = u.user_id
-       WHERE u.fk_roleid = 6`
+       JOIN users u ON up.fk_userid = u.user_id`
     );
 
 
