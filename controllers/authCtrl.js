@@ -78,7 +78,7 @@ const loginCtrl = async (req, res) => {
 
     let user = rows[0];
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
+console.log(user)
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -87,7 +87,7 @@ const loginCtrl = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { email: user.email, id: user.id },
+      { email: user.username, id: user.user_id },
       process.env.JWT_SECRET
     );
 

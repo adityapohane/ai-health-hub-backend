@@ -208,7 +208,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 const getPatientDataById = async (req, res) => {
   try {
     const { patientId } = req.query;
-
+// console.log(patientId)
     // Get user profile
     const [profileRows] = await connection.query(
       `SELECT 
@@ -1008,6 +1008,30 @@ const editPatientTask = async (req, res) => {
 };
 
 
+const getPcmByPatientId = async (req, res) => {
+  const { patientId } = req.params;
+
+  try {
+    const [rows] = await connection.execute(
+      `SELECT * FROM healthhub.pcm_mappings WHERE patient = ? ORDER BY created DESC`,
+      [patientId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient document mappings fetched successfully',
+      data: rows
+    });
+  } catch (err) {
+    console.error('Error fetching mappings:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: err.message || err
+    });
+  }
+};
+
 module.exports = {
   addPatient,
   getPatientDataById,
@@ -1018,5 +1042,6 @@ module.exports = {
   getPatientTaskDetails,
   addPatientTask,
   getAllPatientTasks,
-  editPatientTask
+  editPatientTask,
+  getPcmByPatientId
 };
