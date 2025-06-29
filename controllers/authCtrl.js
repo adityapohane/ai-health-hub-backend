@@ -115,7 +115,71 @@ const loginCtrl = async (req, res) => {
   }
 };
 
+
+
+const changePasswordCtrl = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.user?.id; // Assuming you're using middleware to attach `req.user`
+console.log(req.user)
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized access" });
+    }
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all password fields.",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password and confirmation do not match.",
+      });
+    }
+
+    // Fetch user
+    const [users] = await connection.query("SELECT * FROM users WHERE user_id = ?", [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    const user = users[0];
+
+    const isCurrentPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect.",
+      });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    await connection.query("UPDATE users SET password = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?", [
+      hashedNewPassword,
+      userId,
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error("Error in changePasswordCtrl:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to change password. Please try again later.",
+    });
+  }
+};
+
+
+
 module.exports = {
   registerCtrl,
   loginCtrl,
+  changePasswordCtrl
 };

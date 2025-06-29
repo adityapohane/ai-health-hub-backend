@@ -63,6 +63,6 @@ app.get("/", (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running at port no ${PORT}`);
+app.listen(3000, '0.0.0.0', () => {
+  console.log("Server running...");
 });

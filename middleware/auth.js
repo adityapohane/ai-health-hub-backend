@@ -17,9 +17,9 @@ exports.verifyToken = async (req, res, next) => {
       [token]
     );
 
-    if (rows.length === 0) {
-      return res.status(401).json({ success: false, message: "Invalid token" });
-    }
+    // if (rows.length === 0) {
+    //   return res.status(401).json({ success: false, message: "Invalid token" });
+    // }
 
     // Verify token and check expiration
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {

@@ -5,7 +5,7 @@ const uploadFileToS3 = require("./utils/s3Upload.js");
     const uploadedUrl = await uploadFileToS3(
       "./demo-upload.pdf",
       "varn-dev",
-      "care-plan/firstcareplan.pdf"
+      "common-use/firstcareplan.pdf"
     );
     console.log("File uploaded at:", uploadedUrl);
   } catch (err) {

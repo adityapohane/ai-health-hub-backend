@@ -7,9 +7,11 @@ const authRoutes = require('./authRoute');
 const patientRoutes = require('./patientRoute');
 const settingsRoutes = require('./settingsRoutes');
 const providerRoutes = require('./providerRoutes');
+const ringCentralRoute = require('./ringCentralRoute');
 
 // Public routes (no auth required)
 router.use('/auth', authRoutes);
+router.use('/ring-central', ringCentralRoute);
 
 // Protected routes (require auth)
 router.use('/patient', verifyToken, patientRoutes);

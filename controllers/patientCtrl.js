@@ -232,6 +232,7 @@ const getPatientDataById = async (req, res) => {
     dry_weight,
     bmi,
     bp,
+    patient_condition,
     heart_rate,
     temp,
     CASE (status)
@@ -572,17 +573,17 @@ const editPatientDataById = async (req, res) => {
       .json({ success: false, message: "Error in edit patient data API" });
   }
 };
+
+
 const getAllPatients = async (req, res) => {
   try {
     let { page = 1, limit = 10, order = "DESC", orderBy = "last_visit" } = req.query;
-    // console.log(req)
-    // Convert and sanitize inputs
+
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
     const { roleid, providerid } = req.headers;
 
-    // Safelist to avoid SQL injection on columns
     const allowedOrderBy = [
       "firstname",
       "lastname",
@@ -665,6 +666,8 @@ const getAllPatients = async (req, res) => {
     });
   }
 };
+
+
 
 const getPatientMonitoringData = async (req, res) => {
   try {
@@ -769,68 +772,58 @@ const getPatientTaskDetails = async (req, res) => {
 
 
 const addPatientTask = async (req, res) => {
-  // const {
-  //   taskTitle,
-  //   taskCategory,
-  //   taskSubCategory,
-  //   taskAction,
-  //   taskResult,
-  //   taskType,
-  //   createdBy,
-  //   assignedTo,
-  // } = req.body;
   const {
-    taskTitle,
-    taskCategory,
-    taskSubCategory,
-    taskAction,
-    taskResult,
-    taskType,
-    createdBy,
-    assignedTo,
-    patientId,
-    taskStatus,
-    taskDescription,
-    taskPriority,
-    dueDate,
-    taskNotes,
+    task_title,
+    tasks_category_name,
+    tasks_sub_category_name,
+    task_action,
+    task_result,
+    task_type,
+    created_by,
+    assigned_to_name,
+    patient_id = 1,
+    status,
+    task_description,
+    priority,
+    due_date,
+    task_notes,
   } = { ...req.body, ...req.query };
 
   try {
-
     const sql = `
-    INSERT INTO tasks (
+      INSERT INTO tasks (
+        task_title,
+        fk_category_id,
+        fk_sub_category_id,
+        fk_task_action,
+        fk_task_result,
+        fk_task_type,
+        created_by,
+        assigned_to_id,
+        patient_id,
+        status,
+        task_description,
+        priority,
+        due_date,
+        task_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
       task_title,
-      fk_category_id,
-      fk_sub_category_id,
-      fk_task_action,
-      fk_task_result,
-      fk_task_type,
+      tasks_category_name,
+      tasks_sub_category_name,
+      task_action,
+      task_result,
+      task_type,
       created_by,
-      assigned_to_id,
+      assigned_to_name, // this assumes it's the id; update if necessary
       patient_id,
-      status,
+      status === "completed" ? 1 : 0,
       task_description,
       priority,
       due_date,
       task_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    const values = [
-      taskTitle,
-      taskCategory,
-      taskSubCategory,
-      taskAction,
-      taskResult,
-      taskType,
-      createdBy,
-      assignedTo,
-      patientId,
-      taskStatus === "completed" ? 1 : 0,
-      taskDescription,
-      taskPriority,
-      dueDate,
-      taskNotes
     ];
 
     const [result] = await connection.query(sql, values);
@@ -850,23 +843,15 @@ const addPatientTask = async (req, res) => {
     });
   }
 };
+
+
+
+
+
 const getAllPatientTasks = async (req, res) => {
-  // const {
-  //   taskTitle,
-  //   taskCategory,
-  //   taskSubCategory,
-  //   taskAction,
-  //   taskResult,
-  //   taskType,
-  //   createdBy,
-  //   assignedTo,
-  // } = req.body;
-  const {
-    patientId
-  } = req.query;
+  const { patientId } = req.query;
 
   try {
-
     const [taskDetails] = await connection.query(`
       SELECT 
         t.id,
@@ -891,25 +876,32 @@ const getAllPatientTasks = async (req, res) => {
         ty.task_type,
         ty.task_type_id,
         CONCAT(up.firstname," ",up.lastname) AS assigned_to_name
-
       FROM tasks t
       LEFT JOIN tasks_category c ON t.fk_category_id = c.tasks_category_id
       LEFT JOIN tasks_sub_category sc ON t.fk_sub_category_id = sc.tasks_sub_category_id
       LEFT JOIN task_action a ON t.fk_task_action = a.task_action_id
       LEFT JOIN task_result r ON t.fk_task_result = r.task_result_id
       LEFT JOIN task_types ty ON t.fk_task_type = ty.task_type_id
-        LEFT JOIN user_profiles up ON t.assigned_to_id = up.fk_userid
+      LEFT JOIN user_profiles up ON t.assigned_to_id = up.fk_userid
       WHERE t.patient_id = ?
     `, [patientId]);
 
+    if (!taskDetails || taskDetails.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: 'No task is available for this patient',
+        task_id: []
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Task inserted successfully',
+      message: 'Tasks fetched successfully',
       task_id: taskDetails
     });
 
   } catch (error) {
-    console.error('Insert error:', error);
+    console.error('Fetch error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch tasks',
@@ -917,6 +909,7 @@ const getAllPatientTasks = async (req, res) => {
     });
   }
 };
+
 
 
 const getPatientByPhoneNumber = async (req, res) => {
@@ -959,6 +952,9 @@ const getPatientByPhoneNumber = async (req, res) => {
     });
   }
 };
+
+
+
 const editPatientTask = async (req, res) => {
   const {
     taskTitle,
