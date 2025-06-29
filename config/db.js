@@ -9,21 +9,22 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,       // e.g., 'root'
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
 (async () => {
-    try {
-      const connection = await pool.getConnection();
-      console.log('✅ Connected to MySQL database');
-      connection.release();
-    } catch (err) {
-      console.error('❌ Failed to connect to MySQL database:', err.message);
-      process.exit(1); // Optional: Exit the app if DB fails
-    }
-  })();
-  
+  try {
+    const connection = await pool.getConnection();
+    console.log('✅ Connected to MySQL database');
+    connection.release();
+  } catch (err) {
+    console.error('❌ Failed to connect to MySQL database:', err.message);
+    process.exit(1); // Optional: Exit the app if DB fails
+  }
+})();
+
 
 module.exports = pool;
