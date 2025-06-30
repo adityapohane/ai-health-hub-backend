@@ -43,7 +43,8 @@ const addPatient = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const insertQuery =
       "INSERT INTO users (username, password,fk_roleid,created_user_id) VALUES (?, ?,7,?)";
-    const userValue = [email, hashedPassword, providerid];
+    const { user_id, username } = req.user;
+    const userValue = [email, hashedPassword, user_id];
     const [result] = await connection.query(insertQuery, userValue);
     const insertedId = result.insertId;
 
@@ -170,7 +171,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   created_by
 ) VALUES (?, ?, ?);`;
     notes?.map(async (note) => {
-      const values6 = [insertedId, note.note, providerid];
+      const values6 = [insertedId, note.note, user_id];
       const [noteResult] = await connection.query(sql6, values6);
     });
 
@@ -188,7 +189,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       practiceId ? practiceId : 0,
       insertedId,
       7,
-      providerId ? providerId : 0,
+      user_id ? user_id : 0,
       nurseId ? nurseId : 0,
     ];
     const [mappingResult] = await connection.query(sql7, values7);
@@ -208,7 +209,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 const getPatientDataById = async (req, res) => {
   try {
     const { patientId } = req.query;
-// console.log(patientId)
+    // console.log(patientId)
     // Get user profile
     const [profileRows] = await connection.query(
       `SELECT 
@@ -632,7 +633,7 @@ const getAllPatients = async (req, res) => {
       LIMIT ? OFFSET ?`,
       [limit, offset]
     );
-//       WHERE u.fk_roleid = 6
+    //       WHERE u.fk_roleid = 6
 
     // Count total patients with fk_roleid = 7
     const [[{ total }]] = await connection.query(

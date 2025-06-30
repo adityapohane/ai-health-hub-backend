@@ -78,7 +78,6 @@ const loginCtrl = async (req, res) => {
 
     let user = rows[0];
     const isPasswordValid = await bcrypt.compare(password, user.password);
-console.log(user)
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -87,7 +86,7 @@ console.log(user)
     }
 
     const token = jwt.sign(
-      { email: user.username, id: user.user_id },
+      { username: email, user_id: rows[0].user_id },
       process.env.JWT_SECRET
     );
 
@@ -120,9 +119,8 @@ console.log(user)
 const changePasswordCtrl = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
-    const userId = req.user?.id; // Assuming you're using middleware to attach `req.user`
-console.log(req.user)
-    if (!userId) {
+    const { user_id, username } = req.user; // Assuming you're using middleware to attach `req.user`
+    if (!user_id) {
       return res.status(401).json({ success: false, message: "Unauthorized access" });
     }
 
@@ -141,7 +139,7 @@ console.log(req.user)
     }
 
     // Fetch user
-    const [users] = await connection.query("SELECT * FROM users WHERE user_id = ?", [userId]);
+    const [users] = await connection.query("SELECT * FROM users WHERE user_id = ?", [user_id]);
     if (users.length === 0) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
@@ -160,7 +158,7 @@ console.log(req.user)
 
     await connection.query("UPDATE users SET password = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?", [
       hashedNewPassword,
-      userId,
+      user_id,
     ]);
 
     return res.status(200).json({
