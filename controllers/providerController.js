@@ -95,9 +95,28 @@ const updateUserMapping = async (req, res) => {
     });
   }
 };
+const getProviders = async (req, res) => {
+  try {
+    const query =
+      "SELECT u.user_id,up.firstname,up.lastname,u.username as email FROM users u LEFT JOIN user_profiles up ON up.fk_userid = u.user_id WHERE u.fk_roleid= 6;";
+    const [rows] = await connection.query(query);
+
+    res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
 
 module.exports = {
   getAllOrganizations,
   getAllPractices,
   updateUserMapping,
+  getProviders
 };
