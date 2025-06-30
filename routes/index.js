@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
+const { default: axios } = require("axios")
 
 // Import all route files
 const authRoutes = require('./authRoute');
@@ -28,6 +29,24 @@ router.get('/health', (req, res) => {
         message: 'Server is running and responding'
     });
 });
+
+
+
+router.get('/proxy-image', async (req, res) => {
+    const imageUrl = req.query.url;
+    if (!imageUrl) {
+        return res.status(400).send('Image URL is required');
+    }
+    try {
+        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        res.set('Content-Type', response.headers['content-type']);
+        res.send(response.data);
+    } catch (error) {
+        console.error('Proxy image error:', error);
+        res.status(500).send('Failed to fetch image');
+    }
+});
+
 
 
 // Export the combined router

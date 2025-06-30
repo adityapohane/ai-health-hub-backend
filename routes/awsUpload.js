@@ -20,6 +20,9 @@ router.post('/upload-pdf/:patientId', async (req, res) => {
     }
 
     const { patientId } = req.params;
+    const { totalTime } =req.body;
+
+   
     const uploadedFile = req.files.file;
     const fileName = uploadedFile.name;
     const fileExtension = path.extname(fileName).toLowerCase();
@@ -45,12 +48,12 @@ router.post('/upload-pdf/:patientId', async (req, res) => {
       ContentType: uploadedFile.mimetype,
     };
 
-    const uploadResult = await s3.upload(params).promise();
+    // const uploadResult = await s3.upload(params).promise();
 
     // 3. Insert into DB
     await connection.execute(
-      `INSERT INTO healthhub.pcm_mappings (patient, document_link) VALUES (?, ?)`,
-      [patientId, uploadResult.Location]
+      `INSERT INTO healthhub.pcm_mappings (patient, document_link, total_time) VALUES (?, ?, ?)`,
+      [patientId, uploadResult.Location,totalTime]
     );
 
     // 4. Clean up local file

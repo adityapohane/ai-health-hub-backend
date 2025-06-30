@@ -301,6 +301,7 @@ router.get('/get-all-user-modules', async (req, res) => {
 });
 
 router.post("/pdf-header", settingsCtrl.pdfHeaders);
+router.get("/get-pdf-header", settingsCtrl.getPdfHeaderByProvider);
 
 
 

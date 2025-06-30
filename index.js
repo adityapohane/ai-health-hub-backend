@@ -83,6 +83,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 })
+
 // Test database connection
 pool
   .getConnection()
@@ -299,6 +300,12 @@ io.on("connection", (socket) => {
     console.error("❌ Socket error:", error)
   })
 })
+
+
+
+
+
+
 
 
 // Health check route
