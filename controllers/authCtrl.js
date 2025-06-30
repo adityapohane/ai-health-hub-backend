@@ -86,7 +86,7 @@ const loginCtrl = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { username: email, user_id: rows[0].user_id },
+      { username: email, user_id: rows[0].user_id,roleid:rows[0].fk_roleid },
       process.env.JWT_SECRET
     );
 
@@ -119,7 +119,7 @@ const loginCtrl = async (req, res) => {
 const changePasswordCtrl = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
-    const { user_id, username } = req.user; // Assuming you're using middleware to attach `req.user`
+    const { user_id, username,roleid } = req.user; // Assuming you're using middleware to attach `req.user`
     if (!user_id) {
       return res.status(401).json({ success: false, message: "Unauthorized access" });
     }

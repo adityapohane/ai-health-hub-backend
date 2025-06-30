@@ -586,8 +586,9 @@ const getAllPatients = async (req, res) => {
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
-    const { roleid, providerid } = req.headers;
-
+    const { roleid, user_id:providerid } = req.user;
+    const {searchterm} = req.headers;
+    console.log(req.headers)
     const allowedOrderBy = [
       "firstname",
       "lastname",
@@ -608,42 +609,62 @@ const getAllPatients = async (req, res) => {
     if (!allowedOrder.includes(order.toUpperCase())) order = "DESC";
 
     // Fetch patient data by joining users and user_profiles, filtering on fk_roleid = 7
-    const [patients] = await connection.query(
-      `SELECT 
-        up.fk_userid AS patientId,
-        up.firstname, up.middlename, up.lastname,
-        up.dob AS birthDate,
-        up.work_email AS email,
-        up.phone,
-        up.gender,
-        up.ethnicity,
-        up.last_visit AS lastVisit,
-        up.emergency_contact AS emergencyContact,
-        up.height, up.dry_weight AS weight, up.bmi,
-        up.bp AS bloodPressure,
-        up.heart_rate AS heartRate,
-        up.temp AS temperature,
-        CASE up.status
-          WHEN 1 THEN 'Critical'
-          WHEN 2 THEN 'Abnormal'
-          WHEN 3 THEN 'Normal'
-          ELSE 'NA'
-        END AS status,
-        up.address_line AS address
-      FROM user_profiles up
-      JOIN users u ON up.fk_userid = u.user_id
-        ORDER BY ${orderBy} ${order}
-      LIMIT ? OFFSET ?`,
-      [limit, offset]
-    );
-    //       WHERE u.fk_roleid = 6
+    let getAllQ = `SELECT 
+    fk_userid AS patientId,
+    firstname, middlename, lastname,
+    dob AS birthDate,
+    work_email AS email,
+    phone,
+    gender,
+    ethnicity,
+    last_visit AS lastVisit,
+    emergency_contact AS emergencyContact,
+    height, dry_weight AS weight, bmi,
+    bp AS bloodPressure,
+    heart_rate AS heartRate,
+    temp AS temperature,
+    CASE status
+WHEN 1 THEN 'Critical'
+WHEN 2 THEN 'Abnormal'
+WHEN 3 THEN 'Normal'
+ELSE 'NA'
+END AS status,
+    address_line AS address
+  FROM user_profiles`
+  + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
+if (roleid == 6) {
+  getAllQ += ` AND users_mappings.fk_physician_id = ${providerid}`;
+} 
+if (searchterm) {
+  getAllQ += ` AND (firstname LIKE '%${searchterm}%' OR lastname LIKE '%${searchterm}%' OR middlename LIKE '%${searchterm}%') `;
+}
+getAllQ += ` GROUP BY users_mappings.user_id ORDER BY ${orderBy} ${order}
+  LIMIT ${limit} OFFSET ${offset}`;
 
-    // Count total patients with fk_roleid = 7
-    const [[{ total }]] = await connection.query(
-      `SELECT COUNT(*) AS total
-       FROM user_profiles up
-       JOIN users u ON up.fk_userid = u.user_id`
-    );
+const [patients] = await connection.query(
+  getAllQ
+);
+
+// Total count for pagination
+let countQ = ``
+if (roleid == 6) {
+  countQ += ` SELECT COUNT(*) AS total FROM user_profiles LEFT JOIN users_mappings ON users_mappings.user_id = user_profiles.fk_userid WHERE users_mappings.fk_physician_id = ${providerid} GROUP BY users_mappings.user_id;`;
+} else {
+  countQ = `SELECT COUNT(*) AS total FROM user_profiles GROUP BY user_profiles.fk_userid;`
+}
+// console.log(countQ)
+let total = 0;
+const [countRows] = await connection.query(countQ);
+if (Array.isArray(countRows) && countRows.length > 0) {
+  if (countRows[0].total !== undefined) {
+    // If not grouped, just use the first value
+    total = countRows[0].total;
+  } else {
+    // If grouped, sum all totals
+    total = countRows.reduce((acc, row) => acc + (row.total || 0), 0);
+  }
+}
+
 
 
     // WHERE u.fk_roleid = 6
@@ -652,7 +673,7 @@ const getAllPatients = async (req, res) => {
       message: "Patients fetched successfully",
       data: patients,
       pagination: {
-        total,
+        total:total? total :0,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
@@ -781,7 +802,7 @@ const addPatientTask = async (req, res) => {
     task_type,
     created_by,
     assigned_to_name,
-    patient_id = 1,
+    patientId,
     status,
     task_description,
     priority,
@@ -818,7 +839,7 @@ const addPatientTask = async (req, res) => {
       task_type,
       created_by,
       assigned_to_name, // this assumes it's the id; update if necessary
-      patient_id,
+      patientId,
       status === "completed" ? 1 : 0,
       task_description,
       priority,
@@ -885,7 +906,7 @@ const getAllPatientTasks = async (req, res) => {
       LEFT JOIN user_profiles up ON t.assigned_to_id = up.fk_userid
       WHERE t.patient_id = ?
     `, [patientId]);
-
+      
     if (!taskDetails || taskDetails.length === 0) {
       return res.status(200).json({
         success: false,
