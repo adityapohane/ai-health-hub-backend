@@ -1017,7 +1017,7 @@ const getPcmByPatientId = async (req, res) => {
 
   try {
     const [rows] = await connection.execute(
-      `SELECT * FROM healthhub.pcm_mappings WHERE patient = ? ORDER BY created DESC`,
+      `SELECT * FROM pcm_mappings WHERE patient = ? ORDER BY created DESC`,
       [patientId]
     );
 

@@ -20,9 +20,12 @@ router.post('/upload-pdf/:patientId', async (req, res) => {
     }
 
     const { patientId } = req.params;
-    const { totalTime } =req.body;
+    const { totalTime } = req.body;
+    console.log(req.files);
 
-   
+    if (!req.body.type) {
+      return res.status(400).json({ success: false, message: 'No file type provided.' });
+    }
     const uploadedFile = req.files.file;
     const fileName = uploadedFile.name;
     const fileExtension = path.extname(fileName).toLowerCase();
@@ -42,18 +45,20 @@ router.post('/upload-pdf/:patientId', async (req, res) => {
     const fileStream = fs.createReadStream(uploadPath);
 
     const params = {
-      Bucket: process.env.AWS_S3_BUCKET,
+      Bucket: process.env.BUCKET_NAME,
       Key: `uploads/${fileName}`,
       Body: fileStream,
       ContentType: uploadedFile.mimetype,
     };
 
-    // const uploadResult = await s3.upload(params).promise();
-
+    const uploadResult = await s3.upload(params).promise();
+    const pcmsql = `INSERT INTO pcm_mappings (patient, document_link, total_time) VALUES (?, ?, ?)`;
+    const ccmsql = `INSERT INTO pcm_mappings (patient, document_link, total_time) VALUES (?, ?, ?)`;
+    const sql = req.body.type === 'pcm' ? pcmsql : ccmsql;
     // 3. Insert into DB
-    await connection.execute(
-      `INSERT INTO healthhub.pcm_mappings (patient, document_link, total_time) VALUES (?, ?, ?)`,
-      [patientId, uploadResult.Location,totalTime]
+    await connection.execute(sql,
+
+      [patientId, uploadResult.Location, totalTime]
     );
 
     // 4. Clean up local file

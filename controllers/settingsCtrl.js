@@ -82,11 +82,11 @@ const pdfHeaders = async (req, res) => {
       const fileBuffer = fs.readFileSync(logoFile.tempFilePath);
 
       const s3Params = {
-        Bucket: process.env.AWS_S3_BUCKET,
+        Bucket: process.env.BUCKET_NAME,
         Key: fileName,
         Body: fileBuffer,
         ContentType: logoFile.mimetype,
-       
+
       };
 
       const uploadResult = await s3.upload(s3Params).promise();
