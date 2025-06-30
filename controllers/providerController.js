@@ -114,9 +114,89 @@ const getProviders = async (req, res) => {
   }
 };
 
+const updateProviderInformation = async (req, res) => {
+  try {
+    const { user_id } = req.user;
+    const { npi, taxonomy, taxId, faxId } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: 'Missing userId in request params.' });
+    }
+
+    const sql = `
+      UPDATE user_profiles
+      SET npi = ?, taxonomy = ?, tax_id = ?, fax = ?
+      WHERE fk_userid = ?
+    `;
+
+    const values = [
+      npi || '',
+      taxonomy || '',
+      taxId || '',
+      faxId || '',
+      user_id
+    ];
+
+    const [result] = await connection.query(sql, values);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    return res.status(200).json({ message: 'Provider information updated successfully.' });
+  } catch (error) {
+    console.error('Error updating provider information:', error);
+    return res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+const getProviderInformation = async (req, res) => {
+  try {
+    const { user_id } = req.user;
+
+
+    if (!user_id) {
+      return res.status(400).json({ message: 'Missing userId in request params.' });
+    }
+
+    const sql = `
+    SELECT
+      IFNULL(npi, '') AS npi,
+      IFNULL(taxonomy, '') AS taxonomy,
+      IFNULL(tax_id, '') AS taxId,
+      IFNULL(fax, '') AS faxId
+    FROM user_profiles
+    WHERE fk_userid = ?
+    LIMIT 1
+  `;
+
+    const [rows] = await connection.query(sql, [user_id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Return the provider information
+    const providerInfo = rows[0];
+    return res.status(200).json({
+      success: true,
+      data: {
+        npi: providerInfo.npi,
+        taxonomy: providerInfo.taxonomy,
+        taxId: providerInfo.taxId,
+        faxId: providerInfo.faxId
+      }
+    });
+  } catch (error) {
+    console.error('Error updating provider information:', error);
+    return res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
 module.exports = {
   getAllOrganizations,
   getAllPractices,
   updateUserMapping,
-  getProviders
+  getProviders,
+  updateProviderInformation,
+  getProviderInformation
 };
