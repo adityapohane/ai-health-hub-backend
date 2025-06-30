@@ -152,8 +152,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   date,
   icd10,
   diagnosis,
-  status
-) VALUES (?, ?, ?, ?, ?);`;
+  status,
+  type
+) VALUES (?, ?, ?, ?, ?, ?);`;
     for (const diagnos of diagnosis || []) {
       const values5 = [
         insertedId,
@@ -161,6 +162,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         diagnos.icd10,
         diagnos.diagnosis,
         diagnos.status,
+        diagnos.type,
       ];
       await connection.query(sql5, values5);
     }
@@ -297,7 +299,7 @@ const getPatientDataById = async (req, res) => {
 
     // Get diagnoses
     const [diagnosis] = await connection.query(
-      `SELECT date, icd10, diagnosis, status ,id
+      `SELECT date, icd10, diagnosis, status ,id,type
        FROM patient_diagnoses WHERE patient_id = ?`,
       [patientId]
     );
@@ -339,6 +341,7 @@ const getPatientDataById = async (req, res) => {
       diagnosis,
       notes,
       createdBy: notes?.[0]?.created_by || null,
+      patientId,
     };
 
     return res.status(200).json({
@@ -445,14 +448,14 @@ const editPatientDataById = async (req, res) => {
 
       if (diag.id) {
         const [updateResult] = await connection.query(
-          `UPDATE patient_diagnoses SET date = ?, icd10 = ?, diagnosis = ?, status = ? WHERE id = ? AND patient_id = ?`,
-          [diag.date, diag.icd10, diag.diagnosis, diag.status, diag.id, patientId]
+          `UPDATE patient_diagnoses SET date = ?, icd10 = ?, diagnosis = ?, status = ?, type = ? WHERE id = ? AND patient_id = ?`,
+          [diag.date, diag.icd10, diag.diagnosis, diag.status, diag.type, diag.id, patientId]
         );
         console.log("Update Result for ID:", diag.id, updateResult);
       } else {
         const [insertResult] = await connection.query(
-          `INSERT INTO patient_diagnoses (date, icd10, diagnosis, status, patient_id) VALUES (?, ?, ?, ?, ?)`,
-          [diag.date, diag.icd10, diag.diagnosis, diag.status, patientId]
+          `INSERT INTO patient_diagnoses (date, icd10, diagnosis, status, patient_id , type) VALUES (?, ?, ?, ?, ?, ?)`,
+          [diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
         );
         console.log("Inserted new diagnosis with result:", insertResult);
       }
