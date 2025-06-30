@@ -117,15 +117,15 @@ const getProviders = async (req, res) => {
 const updateProviderInformation = async (req, res) => {
   try {
     const { user_id } = req.user;
-    const { npi, taxonomy, taxId, faxId } = req.body;
+    const { npi, taxonomy, taxId, faxId,firstName,lastName } = req.body;
 
     if (!user_id) {
-      return res.status(400).json({ message: 'Missing userId in request params.' });
+      return res.status(400).json({success:false, message: 'Missing userId in request params.' });
     }
 
     const sql = `
       UPDATE user_profiles
-      SET npi = ?, taxonomy = ?, tax_id = ?, fax = ?
+      SET npi = ?, taxonomy = ?, tax_id = ?, fax = ?,firstname=?,lastname=?
       WHERE fk_userid = ?
     `;
 
@@ -134,23 +134,26 @@ const updateProviderInformation = async (req, res) => {
       taxonomy || '',
       taxId || '',
       faxId || '',
+      firstName,
+      lastName,
       user_id
     ];
 
     const [result] = await connection.query(sql, values);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'User not found.' });
+      return res.status(404).json({ success:false,message: 'User not found.' });
     }
 
-    return res.status(200).json({ message: 'Provider information updated successfully.' });
+    return res.status(200).json({ success:true,message: 'Provider information updated successfully.' });
   } catch (error) {
     console.error('Error updating provider information:', error);
-    return res.status(500).json({ message: 'Internal server error.' });
+    return res.status(500).json({ success:false,message: 'Internal server error.' });
   }
 };
 const getProviderInformation = async (req, res) => {
   try {
+
     const { user_id } = req.user;
 
 
@@ -159,14 +162,17 @@ const getProviderInformation = async (req, res) => {
     }
 
     const sql = `
-    SELECT
-      IFNULL(npi, '') AS npi,
-      IFNULL(taxonomy, '') AS taxonomy,
-      IFNULL(tax_id, '') AS taxId,
-      IFNULL(fax, '') AS faxId
-    FROM user_profiles
-    WHERE fk_userid = ?
-    LIMIT 1
+   SELECT
+  IFNULL(npi, '') AS npi,
+  IFNULL(taxonomy, '') AS taxonomy,
+  IFNULL(tax_id, '') AS taxId,
+  IFNULL(fax, '') AS faxId,
+  IFNULL(firstname, '') AS firstname,
+  IFNULL(lastname, '') AS lastname
+FROM user_profiles
+WHERE fk_userid = ?
+LIMIT 1
+
   `;
 
     const [rows] = await connection.query(sql, [user_id]);
@@ -183,7 +189,9 @@ const getProviderInformation = async (req, res) => {
         npi: providerInfo.npi,
         taxonomy: providerInfo.taxonomy,
         taxId: providerInfo.taxId,
-        faxId: providerInfo.faxId
+        faxId: providerInfo.faxId,
+        firstname: providerInfo.firstname,
+        lastname:providerInfo.lastname
       }
     });
   } catch (error) {
