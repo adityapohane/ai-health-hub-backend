@@ -7,7 +7,7 @@ const {
       getAllPatients, 
       getPatientMonitoringData, 
       getPatientByPhoneNumber, 
-      getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId } = require("../controllers/patientCtrl")
+      getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId, getCcmByPatientId } = require("../controllers/patientCtrl")
 const { resetPasswordTokenCtrl, resetPasswordCtrl } = require("../controllers/resetPasswordCtrl")
 
 
@@ -22,6 +22,7 @@ router.post("/addPatientTask", addPatientTask);
 router.get("/getAllPatientTasks", getAllPatientTasks);
 router.post("/editPatientTask", editPatientTask);
 router.get('/pcm-reports/:patientId', getPcmByPatientId);
+router.get('/ccm-reports/:patientId', getCcmByPatientId);
 
 
 module.exports = router

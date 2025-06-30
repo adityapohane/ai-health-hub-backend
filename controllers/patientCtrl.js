@@ -1035,6 +1035,29 @@ const getPcmByPatientId = async (req, res) => {
     });
   }
 };
+const getCcmByPatientId = async (req, res) => {
+  const { patientId } = req.params;
+
+  try {
+    const [rows] = await connection.execute(
+      `SELECT * FROM ccm_mappings WHERE patient = ? ORDER BY created DESC`,
+      [patientId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient document mappings fetched successfully',
+      data: rows
+    });
+  } catch (err) {
+    console.error('Error fetching mappings:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: err.message || err
+    });
+  }
+};
 
 module.exports = {
   addPatient,
@@ -1047,5 +1070,6 @@ module.exports = {
   addPatientTask,
   getAllPatientTasks,
   editPatientTask,
-  getPcmByPatientId
+  getPcmByPatientId,
+  getCcmByPatientId
 };
