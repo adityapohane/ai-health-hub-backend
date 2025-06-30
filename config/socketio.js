@@ -36,7 +36,7 @@ async function findOrCreateConversation(user1Id, user2Id) {
 function setupSocketIO(server) {
   const io = socketIO(server, {
     cors: {
-      origin: ["http://localhost:8080"],
+      origin: ["http://localhost:8080","https://patient-portal-lac.vercel.app"],
       methods: ["GET", "POST"],
       credentials: true,
     },
