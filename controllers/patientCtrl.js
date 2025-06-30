@@ -588,7 +588,6 @@ const getAllPatients = async (req, res) => {
     const offset = (page - 1) * limit;
     const { roleid, user_id:providerid } = req.user;
     const {searchterm} = req.headers;
-    console.log(req.headers)
     const allowedOrderBy = [
       "firstname",
       "lastname",
