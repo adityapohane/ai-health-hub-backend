@@ -21,7 +21,6 @@ router.post('/upload-pdf/:patientId', async (req, res) => {
 
     const { patientId } = req.params;
     const { totalTime } = req.body;
-    console.log(req.files);
 
     if (!req.body.type) {
       return res.status(400).json({ success: false, message: 'No file type provided.' });
@@ -53,7 +52,7 @@ router.post('/upload-pdf/:patientId', async (req, res) => {
 
     const uploadResult = await s3.upload(params).promise();
     const pcmsql = `INSERT INTO pcm_mappings (patient, document_link, total_time) VALUES (?, ?, ?)`;
-    const ccmsql = `INSERT INTO pcm_mappings (patient, document_link, total_time) VALUES (?, ?, ?)`;
+    const ccmsql = `INSERT INTO ccm_mappings (patient, document_link, total_time) VALUES (?, ?, ?)`;
     const sql = req.body.type === 'pcm' ? pcmsql : ccmsql;
     // 3. Insert into DB
     await connection.execute(sql,
