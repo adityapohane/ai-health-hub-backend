@@ -149,20 +149,20 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
     const sql5 = `INSERT INTO patient_diagnoses (
   patient_id,
-  date,
   icd10,
   diagnosis,
   status,
-  type
+  type,
+  created_by
 ) VALUES (?, ?, ?, ?, ?, ?);`;
     for (const diagnos of diagnosis || []) {
       const values5 = [
         insertedId,
-        diagnos.date,
         diagnos.icd10,
         diagnos.diagnosis,
         diagnos.status,
         diagnos.type,
+        req.user.user_id ? req.user.user_id : 0
       ];
       await connection.query(sql5, values5);
     }
@@ -586,8 +586,8 @@ const getAllPatients = async (req, res) => {
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
-    const { roleid, user_id:providerid } = req.user;
-    const {searchterm} = req.headers;
+    const { roleid, user_id: providerid } = req.user;
+    const { searchterm } = req.headers;
     const allowedOrderBy = [
       "firstname",
       "lastname",
@@ -630,39 +630,39 @@ ELSE 'NA'
 END AS status,
     address_line AS address
   FROM user_profiles`
-  + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
-if (roleid == 6) {
-  getAllQ += ` AND users_mappings.fk_physician_id = ${providerid}`;
-} 
-if (searchterm) {
-  getAllQ += ` AND (firstname LIKE '%${searchterm}%' OR lastname LIKE '%${searchterm}%' OR middlename LIKE '%${searchterm}%') `;
-}
-getAllQ += ` GROUP BY users_mappings.user_id ORDER BY ${orderBy} ${order}
+      + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
+    if (roleid == 6) {
+      getAllQ += ` AND users_mappings.fk_physician_id = ${providerid}`;
+    }
+    if (searchterm) {
+      getAllQ += ` AND (firstname LIKE '%${searchterm}%' OR lastname LIKE '%${searchterm}%' OR middlename LIKE '%${searchterm}%') `;
+    }
+    getAllQ += ` GROUP BY users_mappings.user_id ORDER BY ${orderBy} ${order}
   LIMIT ${limit} OFFSET ${offset}`;
 
-const [patients] = await connection.query(
-  getAllQ
-);
+    const [patients] = await connection.query(
+      getAllQ
+    );
 
-// Total count for pagination
-let countQ = ``
-if (roleid == 6) {
-  countQ += ` SELECT COUNT(*) AS total FROM user_profiles LEFT JOIN users_mappings ON users_mappings.user_id = user_profiles.fk_userid WHERE users_mappings.fk_physician_id = ${providerid} GROUP BY users_mappings.user_id;`;
-} else {
-  countQ = `SELECT COUNT(*) AS total FROM user_profiles GROUP BY user_profiles.fk_userid;`
-}
-// console.log(countQ)
-let total = 0;
-const [countRows] = await connection.query(countQ);
-if (Array.isArray(countRows) && countRows.length > 0) {
-  if (countRows[0].total !== undefined) {
-    // If not grouped, just use the first value
-    total = countRows[0].total;
-  } else {
-    // If grouped, sum all totals
-    total = countRows.reduce((acc, row) => acc + (row.total || 0), 0);
-  }
-}
+    // Total count for pagination
+    let countQ = ``
+    if (roleid == 6) {
+      countQ += ` SELECT COUNT(*) AS total FROM user_profiles LEFT JOIN users_mappings ON users_mappings.user_id = user_profiles.fk_userid WHERE users_mappings.fk_physician_id = ${providerid} GROUP BY users_mappings.user_id;`;
+    } else {
+      countQ = `SELECT COUNT(*) AS total FROM user_profiles GROUP BY user_profiles.fk_userid;`
+    }
+    // console.log(countQ)
+    let total = 0;
+    const [countRows] = await connection.query(countQ);
+    if (Array.isArray(countRows) && countRows.length > 0) {
+      if (countRows[0].total !== undefined) {
+        // If not grouped, just use the first value
+        total = countRows[0].total;
+      } else {
+        // If grouped, sum all totals
+        total = countRows.reduce((acc, row) => acc + (row.total || 0), 0);
+      }
+    }
 
 
 
@@ -672,7 +672,7 @@ if (Array.isArray(countRows) && countRows.length > 0) {
       message: "Patients fetched successfully",
       data: patients,
       pagination: {
-        total:total? total :0,
+        total: total ? total : 0,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
@@ -905,7 +905,7 @@ const getAllPatientTasks = async (req, res) => {
       LEFT JOIN user_profiles up ON t.assigned_to_id = up.fk_userid
       WHERE t.patient_id = ?
     `, [patientId]);
-      
+
     if (!taskDetails || taskDetails.length === 0) {
       return res.status(200).json({
         success: false,
@@ -1078,6 +1078,124 @@ const getCcmByPatientId = async (req, res) => {
     });
   }
 };
+const addPatientDiagnosis = async (req, res) => {
+  const { patientId } = req.query;
+  const { icd10, diagnosis, status, type } = req.body;
+  const { user_id } = req.user;
+  try {
+    const sql5 = `INSERT INTO patient_diagnoses (
+      patient_id,
+      icd10,
+      diagnosis,
+      status,
+      type,
+      created_by
+    ) VALUES (?, ?, ?, ?, ?, ?);`;
+
+    const values5 = [
+      patientId,
+      icd10,
+      diagnosis,
+      status,
+      type,
+      user_id
+    ];
+    const [rows] = await connection.query(sql5, values5);
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient diagnosis added successfully'
+    });
+  } catch (err) {
+    console.error('Error fetching mappings:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: err.message || err
+    });
+  }
+};
+const getPatientDiagnosis = async (req, res) => {
+  const { patientId } = req.query;
+  const { diagnosisId } = req.query;
+  let sql = `SELECT icd10, diagnosis,patient_diagnoses.status ,id,created_by,type,CONCAT(up.firstname," ",up.lastname) AS created_by_name,created_at FROM patient_diagnoses LEFT JOIN user_profiles up ON up.fk_userid =  created_by WHERE patient_id = ${patientId}`;
+  if (diagnosisId) {
+    sql += ` AND id = ${diagnosisId}`;
+  }
+
+
+  try {
+    const [diagnosis] = await connection.query(
+      sql,
+      [patientId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient diagnosis fetched successfully',
+      diagnosis
+    });
+  } catch (err) {
+    console.error('Error adding diagnosis:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: err.message || err
+    });
+  }
+};
+const addPatientNotes = async (req, res) => {
+  const { patientId } = req.query;
+  const { note } = req.body;
+  const { user_id } = req.user;
+  try {
+
+
+    const [notes] = await connection.query(
+      `INSERT INTO notes(
+    patient_id,
+    note,
+    created_by
+  ) VALUES(?, ?, ?); `,
+      [patientId, note, user_id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient Notes added successfully',
+    });
+  } catch (err) {
+    console.error('Error adding notes:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: err.message || err
+    });
+  }
+};
+const getPatientNotes = async (req, res) => {
+  const { patientId } = req.query;
+  try {
+    const [notes] = await connection.query(
+      `SELECT * FROM notes WHERE patient_id = ? `,
+      [patientId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient Notes fetched successfully',
+      data: notes
+    });
+  } catch (err) {
+    console.error('Error fetching notes:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: err.message || err
+    });
+  }
+};
+
 
 module.exports = {
   addPatient,
@@ -1091,5 +1209,9 @@ module.exports = {
   getAllPatientTasks,
   editPatientTask,
   getPcmByPatientId,
-  getCcmByPatientId
+  getCcmByPatientId,
+  addPatientDiagnosis,
+  getPatientDiagnosis,
+  addPatientNotes,
+  getPatientNotes,
 };
