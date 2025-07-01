@@ -663,8 +663,17 @@ END AS status,
         total = countRows.reduce((acc, row) => acc + (row.total || 0), 0);
       }
     }
-
-
+    if (patients.length) {
+      patients.diagnosis = [];
+      for (let patient of patients) {
+        const [diagnosis] = await connection.query(
+          `SELECT icd10, diagnosis, status ,id,type
+          FROM patient_diagnoses WHERE patient_id = ?`,
+          [patient.patientId]
+        );
+        patient.diagnosis.push(diagnosis);
+      }
+    }
 
     // WHERE u.fk_roleid = 6
     return res.status(200).json({
