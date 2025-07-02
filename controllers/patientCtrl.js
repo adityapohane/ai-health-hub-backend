@@ -948,35 +948,51 @@ const getPatientByPhoneNumber = async (req, res) => {
 
 
 const editPatientTask = async (req, res) => {
+  const { user_id } = req.user;
   const {
-    taskTitle,
-    taskCategory,
-    taskSubCategory,
-    taskAction,
-    taskResult,
-    taskType,
-    createdBy,
-    assignedTo,
-    patientId,
-    taskStatus,
-    taskDescription,
-    taskPriority,
+    taskId,
+    title,
+    type,
+    description,
+    priority,
     dueDate,
-    taskNotes,
-    taskId
+    duration,
+    frequency,
+    frequencyType,
+    status
   } = { ...req.body, ...req.query };
+
+  if (!taskId) {
+    return res.status(400).json({ success: false, message: 'Missing taskId' });
+  }
 
   try {
     const sql = `
       UPDATE tasks SET
-        status = ?
-      WHERE id = ? AND patient_id = ?
+        task_title = ?,
+        frequency = ?,
+        status = ?,
+        task_description = ?,
+        priority = ?,
+        due_date = ?,
+        type = ?,
+        duration = ?,
+        frequency_type = ?
+      WHERE
+        task_id = ? 
     `;
 
     const values = [
-      taskStatus === "completed" ? 1 : 0,
-      taskId,
-      patientId
+      title,
+      frequency,
+      status,
+      description,
+      priority,
+      dueDate,
+      type,
+      duration,
+      frequencyType,
+      taskId
     ];
 
     const [result] = await connection.query(sql, values);
@@ -984,7 +1000,7 @@ const editPatientTask = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
-        message: 'No task found with provided taskId and patientId'
+        message: 'Task not found or not authorized'
       });
     }
 
