@@ -979,7 +979,7 @@ const editPatientTask = async (req, res) => {
         duration = ?,
         frequency_type = ?
       WHERE
-        task_id = ? 
+        id = ? 
     `;
 
     const values = [
