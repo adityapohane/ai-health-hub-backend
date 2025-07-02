@@ -9,7 +9,7 @@ const patientRoutes = require('./patientRoute');
 const settingsRoutes = require('./settingsRoutes');
 const providerRoutes = require('./providerRoutes');
 const ringCentralRoute = require('./ringCentralRoute');
-const appointmentRoutes = require('./appointmentRoute');
+const appointmentRoutes = require('./appointmentRoutes');
 const awsRoute = require('./awsUpload');
 const tasksRoutes = require('./tasksRoutes');
 
