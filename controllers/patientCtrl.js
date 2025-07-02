@@ -802,58 +802,48 @@ const getPatientTaskDetails = async (req, res) => {
 
 
 const addPatientTask = async (req, res) => {
+  const { user_id } = req.user;
   const {
-    task_title,
-    tasks_category_name,
-    tasks_sub_category_name,
-    task_action,
-    task_result,
-    task_type,
-    created_by,
-    assigned_to_name,
+    title,
     patientId,
-    status,
-    task_description,
+    type,
+    description,
     priority,
-    due_date,
-    task_notes,
+    dueDate,
+    duration,
+    frequency,
+    frequencyType,
+    status
   } = { ...req.body, ...req.query };
-
   try {
     const sql = `
       INSERT INTO tasks (
         task_title,
-        fk_category_id,
-        fk_sub_category_id,
-        fk_task_action,
-        fk_task_result,
-        fk_task_type,
         created_by,
-        assigned_to_id,
+        frequency,
         patient_id,
         status,
         task_description,
         priority,
         due_date,
-        task_notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        type,
+        duration,
+        frequency_type  
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
-      task_title,
-      tasks_category_name,
-      tasks_sub_category_name,
-      task_action,
-      task_result,
-      task_type,
-      created_by,
-      assigned_to_name, // this assumes it's the id; update if necessary
+      title,
+      user_id,
+      frequency,
       patientId,
-      status === "completed" ? 1 : 0,
-      task_description,
+      status,
+      description,
       priority,
-      due_date,
-      task_notes
+      dueDate,
+      type,
+      duration,
+      frequencyType
     ];
 
     const [result] = await connection.query(sql, values);
@@ -879,42 +869,14 @@ const addPatientTask = async (req, res) => {
 
 
 const getAllPatientTasks = async (req, res) => {
-  const { patientId } = req.query;
+  const { patientId, type } = { ...req.body, ...req.query };
 
   try {
-    const [taskDetails] = await connection.query(`
-      SELECT 
-        t.id,
-        t.task_title,
-        t.task_description,
-        IF (t.status = 1, 'completed', 'inprogress') AS status,
-        t.priority,
-        t.due_date,
-        t.task_notes,
-        t.created_by,
-        t.assigned_to_id,
-        t.patient_id,
-        t.created,
-        c.tasks_category_name,
-        c.tasks_category_id,
-        sc.tasks_sub_category_name,
-        sc.tasks_sub_category_id,
-        a.task_action_id,
-        a.task_action,
-        r.task_result_id,
-        r.task_result,
-        ty.task_type,
-        ty.task_type_id,
-        CONCAT(up.firstname," ",up.lastname) AS assigned_to_name
-      FROM tasks t
-      LEFT JOIN tasks_category c ON t.fk_category_id = c.tasks_category_id
-      LEFT JOIN tasks_sub_category sc ON t.fk_sub_category_id = sc.tasks_sub_category_id
-      LEFT JOIN task_action a ON t.fk_task_action = a.task_action_id
-      LEFT JOIN task_result r ON t.fk_task_result = r.task_result_id
-      LEFT JOIN task_types ty ON t.fk_task_type = ty.task_type_id
-      LEFT JOIN user_profiles up ON t.assigned_to_id = up.fk_userid
-      WHERE t.patient_id = ?
-    `, [patientId]);
+    let sql = `SELECT * FROM tasks WHERE patient_id = ?`;
+    if (type) {
+      sql += ` AND type = '${type}'`;
+    }
+    const [taskDetails] = await connection.query(sql, [patientId]);
 
     if (!taskDetails || taskDetails.length === 0) {
       return res.status(200).json({
@@ -986,43 +948,59 @@ const getPatientByPhoneNumber = async (req, res) => {
 
 
 const editPatientTask = async (req, res) => {
+  const { user_id } = req.user;
   const {
-    taskTitle,
-    taskCategory,
-    taskSubCategory,
-    taskAction,
-    taskResult,
-    taskType,
-    createdBy,
-    assignedTo,
-    patientId,
-    taskStatus,
-    taskDescription,
-    taskPriority,
+    taskId,
+    title,
+    type,
+    description,
+    priority,
     dueDate,
-    taskNotes,
-    taskId
+    duration,
+    frequency,
+    frequencyType,
+    status
   } = { ...req.body, ...req.query };
+  console.log(req.body)
+  if (!taskId) {
+    return res.status(400).json({ success: false, message: 'Missing taskId' });
+  }
 
   try {
     const sql = `
       UPDATE tasks SET
-        status = ?
-      WHERE id = ? AND patient_id = ?
+        task_title = ?,
+        frequency = ?,
+        status = ?,
+        task_description = ?,
+        priority = ?,
+        due_date = ?,
+        type = ?,
+        duration = ?,
+        frequency_type = ?
+      WHERE
+        id = ? 
     `;
 
     const values = [
-      taskStatus === "completed" ? 1 : 0,
-      taskId,
-      patientId
+      title,
+      frequency,
+      status,
+      description,
+      priority,
+      dueDate,
+      type,
+      duration,
+      frequencyType,
+      taskId
     ];
-
+    console.log(values)
     const [result] = await connection.query(sql, values);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
-        message: 'No task found with provided taskId and patientId'
+        message: 'Task not found or not authorized'
       });
     }
 
@@ -1155,8 +1133,7 @@ const getPatientDiagnosis = async (req, res) => {
   }
 };
 const addPatientNotes = async (req, res) => {
-  const { patientId } = req.query;
-  const { note } = req.body;
+  const { note, type, patientId } = { ...req.body, ...req.query };
   const { user_id } = req.user;
   try {
 
@@ -1165,9 +1142,10 @@ const addPatientNotes = async (req, res) => {
       `INSERT INTO notes(
     patient_id,
     note,
+    type,
     created_by
-  ) VALUES(?, ?, ?); `,
-      [patientId, note, user_id]
+  ) VALUES(?, ?, ?, ?);`,
+      [patientId, note, type, user_id]
     );
 
     res.status(200).json({
@@ -1184,12 +1162,13 @@ const addPatientNotes = async (req, res) => {
   }
 };
 const getPatientNotes = async (req, res) => {
-  const { patientId } = req.query;
+  const { patientId, type } = { ...req.body, ...req.query };
   try {
-    const [notes] = await connection.query(
-      `SELECT * FROM notes WHERE patient_id = ? `,
-      [patientId]
-    );
+    let sql = `SELECT * FROM notes WHERE patient_id = ?`;
+    if (type) {
+      sql += ` AND type = ${type}`;
+    }
+    const [notes] = await connection.query(sql, [patientId]);
 
     res.status(200).json({
       success: true,
@@ -1205,7 +1184,26 @@ const getPatientNotes = async (req, res) => {
     });
   }
 };
+const getUpcomingAndOverdueTasks = async (req, res) => {
+  const patientId = req.query.patientId;
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  console.log(today)
+  const [upcomingTasks] = await connection.query(`
+    SELECT * FROM tasks
+    WHERE patient_id = ? AND due_date >= ?
+  `, [patientId, today]);
 
+  const [overdueTasks] = await connection.query(`
+    SELECT * FROM tasks
+    WHERE patient_id = ? AND due_date < ?
+  `, [patientId, today]);
+console.log(upcomingTasks,overdueTasks)
+  res.json({
+    patient_id: patientId,
+    upcoming: upcomingTasks,
+    overdue: overdueTasks
+  });
+};
 
 module.exports = {
   addPatient,
@@ -1224,4 +1222,5 @@ module.exports = {
   getPatientDiagnosis,
   addPatientNotes,
   getPatientNotes,
+  getUpcomingAndOverdueTasks
 };

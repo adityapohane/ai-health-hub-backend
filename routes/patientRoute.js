@@ -7,8 +7,7 @@ const {
       getAllPatients,
       getPatientMonitoringData,
       getPatientByPhoneNumber,
-      getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId, getCcmByPatientId, addPatientDiagnosis, getPatientDiagnosis, addPatientNotes, getPatientNotes } = require("../controllers/patientCtrl")
-const { resetPasswordTokenCtrl, resetPasswordCtrl } = require("../controllers/resetPasswordCtrl")
+      getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId, getCcmByPatientId, addPatientDiagnosis, getPatientDiagnosis, addPatientNotes, getPatientNotes, getUpcomingAndOverdueTasks } = require("../controllers/patientCtrl")
 
 
 router.post("/create", addPatient);
@@ -21,6 +20,8 @@ router.get("/getPatientTaskDetails", getPatientTaskDetails);
 router.post("/addPatientTask", addPatientTask);
 router.get("/getAllPatientTasks", getAllPatientTasks);
 router.post("/editPatientTask", editPatientTask);
+router.get("/getUpcomingAndOverdueTasks", getUpcomingAndOverdueTasks);
+
 router.get('/pcm-reports/:patientId', getPcmByPatientId);
 router.get('/ccm-reports/:patientId', getCcmByPatientId);
 router.post("/addPatientDiagnosis", addPatientDiagnosis);
