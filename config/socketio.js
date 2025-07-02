@@ -36,7 +36,7 @@ async function findOrCreateConversation(user1Id, user2Id) {
 function setupSocketIO(server) {
   const io = socketIO(server, {
     cors: {
-      origin: ["http://localhost:8080","https://neuro-varn-digihealth.vercel.app"],
+      origin: ["http://localhost:8080","https://neuro-varn-digihealth.vercel.app","http://localhost:8081"],
       methods: ["GET", "POST"],
       credentials: true,
     },
