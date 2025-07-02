@@ -29,7 +29,7 @@ const io = setupSocketIO(server)
 app.use(
   cors({
     origin: "*",
-   
+
   }),
 )
 
@@ -51,6 +51,7 @@ cloudinaryConnect()
 // Routes
 const apiRoutes = require("./routes/index")
 app.use("/api/v1", apiRoutes)
+app.use("/api/v1/tenovi", require("./routes/tenoviRoutes"));
 
 app.use("/check", (req, res) => {
   res.send({
