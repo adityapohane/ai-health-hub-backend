@@ -18,7 +18,7 @@ router.get("/getAllPatients", getAllPatients);
 router.get("/getPatientMonitoringData", getPatientMonitoringData);
 router.get("/getPatientTaskDetails", getPatientTaskDetails);
 router.post("/addPatientTask", addPatientTask);
-router.get("/getAllPatientTasks", getAllPatientTasks);
+router.get("/getPatientTasks", getAllPatientTasks);
 router.post("/editPatientTask", editPatientTask);
 router.get("/getUpcomingAndOverdueTasks", getUpcomingAndOverdueTasks);
 
