@@ -869,12 +869,12 @@ const addPatientTask = async (req, res) => {
 
 
 const getAllPatientTasks = async (req, res) => {
-  const { patientId ,type} = {...req.body,...req.query};
+  const { patientId, type } = { ...req.body, ...req.query };
 
   try {
     let sql = `SELECT * FROM tasks WHERE patient_id = ?`;
     if (type) {
-      sql += ` AND type = ${type}`;
+      sql += ` AND type = '${type}'`;
     }
     const [taskDetails] = await connection.query(sql, [patientId]);
 
@@ -961,7 +961,7 @@ const editPatientTask = async (req, res) => {
     frequencyType,
     status
   } = { ...req.body, ...req.query };
-
+  console.log(req.body)
   if (!taskId) {
     return res.status(400).json({ success: false, message: 'Missing taskId' });
   }
@@ -994,7 +994,7 @@ const editPatientTask = async (req, res) => {
       frequencyType,
       taskId
     ];
-
+    console.log(values)
     const [result] = await connection.query(sql, values);
 
     if (result.affectedRows === 0) {
@@ -1133,7 +1133,7 @@ const getPatientDiagnosis = async (req, res) => {
   }
 };
 const addPatientNotes = async (req, res) => {
-  const { note,type,patientId } = {...req.body,...req.query};
+  const { note, type, patientId } = { ...req.body, ...req.query };
   const { user_id } = req.user;
   try {
 
@@ -1162,7 +1162,7 @@ const addPatientNotes = async (req, res) => {
   }
 };
 const getPatientNotes = async (req, res) => {
-  const { patientId,type } = {...req.body,...req.query};
+  const { patientId, type } = { ...req.body, ...req.query };
   try {
     let sql = `SELECT * FROM notes WHERE patient_id = ?`;
     if (type) {
