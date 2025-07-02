@@ -1184,7 +1184,26 @@ const getPatientNotes = async (req, res) => {
     });
   }
 };
+const getUpcomingAndOverdueTasks = async (req, res) => {
+  const patientId = req.query.patientId;
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  console.log(today)
+  const [upcomingTasks] = await connection.query(`
+    SELECT * FROM tasks
+    WHERE patient_id = ? AND due_date >= ?
+  `, [patientId, today]);
 
+  const [overdueTasks] = await connection.query(`
+    SELECT * FROM tasks
+    WHERE patient_id = ? AND due_date < ?
+  `, [patientId, today]);
+console.log(upcomingTasks,overdueTasks)
+  res.json({
+    patient_id: patientId,
+    upcoming: upcomingTasks,
+    overdue: overdueTasks
+  });
+};
 
 module.exports = {
   addPatient,
@@ -1203,4 +1222,5 @@ module.exports = {
   getPatientDiagnosis,
   addPatientNotes,
   getPatientNotes,
+  getUpcomingAndOverdueTasks
 };
