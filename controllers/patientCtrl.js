@@ -872,11 +872,11 @@ const getAllPatientTasks = async (req, res) => {
   const { patientId ,type} = {...req.body,...req.query};
 
   try {
-    const [taskDetails] = await connection.query(`
-      SELECT *
-      FROM tasks
-      WHERE patient_id = ? AND type = ?
-    `, [patientId,type]);
+    let sql = `SELECT * FROM tasks WHERE patient_id = ?`;
+    if (type) {
+      sql += ` AND type = ${type}`;
+    }
+    const [taskDetails] = await connection.query(sql, [patientId]);
 
     if (!taskDetails || taskDetails.length === 0) {
       return res.status(200).json({
@@ -1148,10 +1148,11 @@ const addPatientNotes = async (req, res) => {
 const getPatientNotes = async (req, res) => {
   const { patientId,type } = {...req.body,...req.query};
   try {
-    const [notes] = await connection.query(
-      `SELECT * FROM notes WHERE patient_id = ? AND type = ?`,
-      [patientId,type]
-    );
+    let sql = `SELECT * FROM notes WHERE patient_id = ?`;
+    if (type) {
+      sql += ` AND type = ${type}`;
+    }
+    const [notes] = await connection.query(sql, [patientId]);
 
     res.status(200).json({
       success: true,
