@@ -23,7 +23,7 @@ router.use('/patient', verifyToken, patientRoutes);
 router.use('/settings', verifyToken, settingsRoutes);
 router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
-router.use('/', verifyToken, tasksRoutes);
+router.use('/patient', verifyToken, tasksRoutes);
 router.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
