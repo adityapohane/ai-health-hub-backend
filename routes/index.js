@@ -9,8 +9,9 @@ const patientRoutes = require('./patientRoute');
 const settingsRoutes = require('./settingsRoutes');
 const providerRoutes = require('./providerRoutes');
 const ringCentralRoute = require('./ringCentralRoute');
-const appointmentRoutes = require('./appointmentRoute');
+const appointmentRoutes = require('./appointmentRoutes');
 const awsRoute = require('./awsUpload');
+const tasksRoutes = require('./tasksRoutes');
 
 // Public routes (no auth required)
 router.use('/auth', authRoutes);
@@ -22,6 +23,7 @@ router.use('/patient', verifyToken, patientRoutes);
 router.use('/settings', verifyToken, settingsRoutes);
 router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
+router.use('/patient', verifyToken, tasksRoutes);
 router.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
