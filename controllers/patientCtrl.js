@@ -309,6 +309,10 @@ const getPatientDataById = async (req, res) => {
       `SELECT note, created, created_by ,note_id FROM notes WHERE patient_id = ?`,
       [patientId]
     );
+    const [tasks] = await connection.query(
+      `SELECT * FROM tasks WHERE patient_id = ?`,
+      [patientId]
+    );
 
     // Compose full response
     const response = {
@@ -340,6 +344,7 @@ const getPatientDataById = async (req, res) => {
       currentMedications,
       diagnosis,
       notes,
+      tasks,
       createdBy: notes?.[0]?.created_by || null,
       patientId,
     };
@@ -445,7 +450,8 @@ const editPatientDataById = async (req, res) => {
     // 6. Update diagnosis
     for (const diag of diagnosis || []) {
       console.log("Processing diagnosis entry:", diag);
-
+      const sql = `DELETE FROM patient_diagnoses WHERE patient_id = ?`;
+      await connection.query(sql, [patientId]);
       if (diag.id) {
         const [updateResult] = await connection.query(
           `UPDATE patient_diagnoses SET date = ?, icd10 = ?, diagnosis = ?, status = ?, type = ? WHERE id = ? AND patient_id = ?`,
