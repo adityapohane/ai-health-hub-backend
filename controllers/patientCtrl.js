@@ -243,8 +243,10 @@ const getPatientDataById = async (req, res) => {
       WHEN 2 THEN 'Abnormal'
       WHEN 3 THEN 'Normal'
       ELSE 'NA'
-    END AS status
+    END AS status,
+    u.created
   FROM user_profiles 
+  LEFT JOIN users u on u.user_id = user_profiles.fk_userid
   WHERE fk_userid = ?`,
       [patientId]
     );
@@ -1271,7 +1273,7 @@ const addPatientInsurance = async (req, res) => {
   }
 
   try {
-  
+
     const sql = `
       INSERT INTO patient_insurances (
         insurance_policy_number,
