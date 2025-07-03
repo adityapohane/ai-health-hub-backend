@@ -1271,8 +1271,7 @@ const addPatientInsurance = async (req, res) => {
   }
 
   try {
-    const connection = await mysql.createConnection(dbConfig);
-
+  
     const sql = `
       INSERT INTO patient_insurances (
         insurance_policy_number,

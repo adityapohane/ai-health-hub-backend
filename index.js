@@ -11,6 +11,7 @@ const bodyParser = require("body-parser")
 const http = require("http")
 const mysql = require("mysql2/promise")
 const { setupSocketIO } = require("./config/socketio")
+const rateLimit = require('express-rate-limit');
 
 dotenv.config()
 
@@ -45,6 +46,17 @@ app.use(
     tempFileDir: "/tmp",
   }),
 )
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(limiter);
 
 cloudinaryConnect()
 
