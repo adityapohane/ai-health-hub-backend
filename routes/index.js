@@ -12,7 +12,8 @@ const ringCentralRoute = require('./ringCentralRoute');
 const appointmentRoutes = require('./appointmentRoutes');
 const awsRoute = require('./awsUpload');
 const tasksRoutes = require('./tasksRoutes');
-
+const workFlowRoutes = require('./workFlowRoutes');
+router.use('/work-flow', verifyToken, workFlowRoutes);
 // Public routes (no auth required)
 router.use('/auth', authRoutes);
 router.use('/ring-central', ringCentralRoute);
