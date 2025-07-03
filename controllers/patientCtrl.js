@@ -315,51 +315,51 @@ const getPatientDataById = async (req, res) => {
     );
 
     // Compose full response
-    if(profile){
-    const response = {
-      firstName: profile.firstname,
-      middleName: profile.middlename,
-      lastName: profile.lastname,
-      email: profile.work_email || user?.username,
-      phone: profile.phone,
-      gender: profile.gender,
-      status: profile.status,
-      addressLine1: profile.address_line,
-      addressLine2: profile.address_line_2,
-      city: profile.city,
-      state: profile.state,
-      country: profile.country,
-      zipCode: profile.zip,
-      birthDate: profile.dob,
-      lastVisit: profile.last_visit,
-      emergencyContact: profile.emergency_contact,
-      ethnicity: profile.ethnicity,
-      height: profile.height,
-      weight: profile.dry_weight,
-      bmi: profile.bmi,
-      bloodPressure: profile.bp,
-      heartRate: profile.heart_rate,
-      temperature: profile.temp,
-      allergies,
-      insurance: insurances,
-      currentMedications,
-      diagnosis,
-      notes,
-      tasks,
-      createdBy: notes?.[0]?.created_by || null,
-      patientId,
-    };
-    return res.status(200).json({
-      success: true,
-      message: "Patient data fetched successfully",
-      data: response,
-    });
-  }else{
-    return res.status(200).json({
-      success: false,
-      message: "Patient data not found",
-    });
-  }
+    if (profile) {
+      const response = {
+        firstName: profile.firstname,
+        middleName: profile.middlename,
+        lastName: profile.lastname,
+        email: profile.work_email || user?.username,
+        phone: profile.phone,
+        gender: profile.gender,
+        status: profile.status,
+        addressLine1: profile.address_line,
+        addressLine2: profile.address_line_2,
+        city: profile.city,
+        state: profile.state,
+        country: profile.country,
+        zipCode: profile.zip,
+        birthDate: profile.dob,
+        lastVisit: profile.last_visit,
+        emergencyContact: profile.emergency_contact,
+        ethnicity: profile.ethnicity,
+        height: profile.height,
+        weight: profile.dry_weight,
+        bmi: profile.bmi,
+        bloodPressure: profile.bp,
+        heartRate: profile.heart_rate,
+        temperature: profile.temp,
+        allergies,
+        insurance: insurances,
+        currentMedications,
+        diagnosis,
+        notes,
+        tasks,
+        createdBy: notes?.[0]?.created_by || null,
+        patientId,
+      };
+      return res.status(200).json({
+        success: true,
+        message: "Patient data fetched successfully",
+        data: response,
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "Patient data not found",
+      });
+    }
 
   } catch (error) {
     console.error("Error fetching patient data:", error);
@@ -457,13 +457,13 @@ const editPatientDataById = async (req, res) => {
     // 6. Update diagnosis
     if (diagnosis && diagnosis.length > 0) {
       console.log(`Deleting old diagnoses for patient_id = ${patientId}`);
-      
+
       // Step 1: Delete old entries ONCE
       await connection.query(
         `DELETE FROM patient_diagnoses WHERE patient_id = ?`,
         [patientId]
       );
-    
+
       for (const diag of diagnosis) {
         if (diag.id) {
           await connection.query(
@@ -481,7 +481,7 @@ const editPatientDataById = async (req, res) => {
           console.log("Inserted new diagnosis entry without ID");
         }
       }
-    
+
       console.log("All new diagnosis entries inserted for patient:", patientId);
     } else {
       console.log("No diagnosis entries provided; skipping update.");
@@ -1223,7 +1223,7 @@ const getUpcomingAndOverdueTasks = async (req, res) => {
     SELECT * FROM tasks
     WHERE patient_id = ? AND due_date < ?
   `, [patientId, today]);
-console.log(upcomingTasks,overdueTasks)
+  console.log(upcomingTasks, overdueTasks)
   res.json({
     patient_id: patientId,
     upcoming: upcomingTasks,
@@ -1234,7 +1234,7 @@ const addPatientAllergy = async (req, res) => {
   const { category, allergen, reaction, patientId } = { ...req.body, ...req.query };
 
   if (!category || !allergen || !reaction || !patientId) {
-    return res.status(400).json({ message: 'Missing fields' });
+    return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
   try {
@@ -1245,9 +1245,9 @@ const addPatientAllergy = async (req, res) => {
       reaction,
       patientId,
     ]);
-    res.status(201).json({ message: 'Allergy added', id: result.insertId });
+    res.status(201).json({ success: true, message: 'Allergy added', id: result.insertId });
   } catch (error) {
-    res.status(500).json({ message: 'DB error', error: error.message });
+    res.status(500).json({ success: false, message: 'DB error', error: error.message });
   }
 }
 const addPatientInsurance = async (req, res) => {
@@ -1267,7 +1267,7 @@ const addPatientInsurance = async (req, res) => {
     !policyNumber || !groupNumber || !company ||
     !plan || !expirationDate || !type || !effectiveDate || !fk_userid
   ) {
-    return res.status(400).json({ message: 'All fields are required' });
+    return res.status(400).json({ success: false, message: 'All fields are required' });
   }
 
   try {
@@ -1300,13 +1300,14 @@ const addPatientInsurance = async (req, res) => {
 
 
     res.status(201).json({
+      success: true,
       message: 'Insurance record added successfully',
       patient_insurance_id: result.insertId,
     });
 
   } catch (error) {
     console.error('DB Error:', error.message);
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
   }
 };
 const addPatientMedication = async (req, res) => {
@@ -1326,7 +1327,7 @@ const addPatientMedication = async (req, res) => {
     !patientId || !name || !dosage || !frequency ||
     !prescribedBy || !startDate || !endDate || !status
   ) {
-    return res.status(400).json({ message: 'All fields are required' });
+    return res.status(400).json({ success: false, message: 'All fields are required' });
   }
 
   try {
@@ -1356,12 +1357,13 @@ const addPatientMedication = async (req, res) => {
     const [result] = await connection.execute(sql, values);
 
     res.status(201).json({
+      success: true,
       message: 'Medication added successfully',
       medication_id: result.insertId,
     });
   } catch (error) {
     console.error('Error adding medication:', error.message);
-    res.status(500).json({ message: 'Database error', error: error.message });
+    res.status(500).json({ success: false, message: 'Database error', error: error.message });
   }
 };
 
