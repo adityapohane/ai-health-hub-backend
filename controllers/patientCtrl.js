@@ -349,6 +349,7 @@ const getPatientDataById = async (req, res) => {
         notes,
         tasks,
         createdBy: notes?.[0]?.created_by || null,
+        created: profile.created,
         patientId,
       };
       return res.status(200).json({
