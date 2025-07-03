@@ -7,7 +7,7 @@ const {
       getAllPatients,
       getPatientMonitoringData,
       getPatientByPhoneNumber,
-      getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId, getCcmByPatientId, addPatientDiagnosis, getPatientDiagnosis, addPatientNotes, getPatientNotes, getUpcomingAndOverdueTasks, addPatientAllergy, addPatientInsurance, addPatientMedication } = require("../controllers/patientCtrl")
+      getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId, getCcmByPatientId, addPatientDiagnosis, getPatientDiagnosis, addPatientNotes, getPatientNotes, getUpcomingAndOverdueTasks, addPatientAllergy, addPatientInsurance, addPatientMedication, getPatientTimings } = require("../controllers/patientCtrl")
 
 
 router.post("/create", addPatient);
@@ -31,5 +31,5 @@ router.get("/getPatientNotes", getPatientNotes);
 router.post("/addPatientAllergy", addPatientAllergy);
 router.post("/addPatientInsurance", addPatientInsurance);
 router.post("/addPatientMedication", addPatientMedication);
-
+router.get("/getPatientTimings", getPatientTimings);
 module.exports = router

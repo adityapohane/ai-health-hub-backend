@@ -1366,7 +1366,54 @@ const addPatientMedication = async (req, res) => {
     res.status(500).json({ success: false, message: 'Database error', error: error.message });
   }
 };
+const getPatientTimings = async (req, res) => {
+  let { patientId, user_id } = { ...req.query, ...req.body };
+   user_id = 13
 
+  if (!patientId || !user_id) {
+    return res.status(400).json({ error: 'Missing patientId or provider_id' });
+  }
+
+  try {
+    const [rows] = await connection.query(
+      `
+      SELECT
+        CEIL((
+          (SELECT IFNULL(SUM(duration), 0)
+           FROM patient_billing_notes
+           WHERE patient_id = ? AND timed_by = ?) +
+           
+          (SELECT IFNULL(SUM(duration), 0)
+           FROM tasks
+           WHERE patient_id = ? AND created_by = ?)
+        ) / 60) AS total_minutes
+      `,
+      [patientId, user_id, patientId, user_id]
+    );
+    const [billingNotes] = await connection.query(
+      `SELECT * FROM patient_billing_notes WHERE patient_id = ? AND timed_by = ?`,
+      [patientId, user_id]
+    );
+
+    const [tasks] = await connection.query(
+      `SELECT * FROM tasks WHERE patient_id = ? AND created_by = ?`,
+      [patientId, user_id]
+    );
+    res.status(200).json({
+      success: true,
+      message: 'Patient timings fetched successfully',
+      totalMinutes: rows.length ? rows[0].total_minutes : 0,
+      entries: [...billingNotes, ...tasks]
+    });
+  } catch (error) {
+    console.error('Error fetching patient timings:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Database error',
+      error: error.message || error
+    });
+  }
+};
 module.exports = {
   addPatient,
   getPatientDataById,
@@ -1387,5 +1434,6 @@ module.exports = {
   getUpcomingAndOverdueTasks,
   addPatientAllergy,
   addPatientInsurance,
-  addPatientMedication
+  addPatientMedication,
+  getPatientTimings,
 };
