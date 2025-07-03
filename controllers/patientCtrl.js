@@ -315,6 +315,7 @@ const getPatientDataById = async (req, res) => {
     );
 
     // Compose full response
+    if(profile){
     const response = {
       firstName: profile.firstname,
       middleName: profile.middlename,
@@ -348,12 +349,18 @@ const getPatientDataById = async (req, res) => {
       createdBy: notes?.[0]?.created_by || null,
       patientId,
     };
-
     return res.status(200).json({
       success: true,
       message: "Patient data fetched successfully",
       data: response,
     });
+  }else{
+    return res.status(200).json({
+      success: false,
+      message: "Patient data not found",
+    });
+  }
+
   } catch (error) {
     console.error("Error fetching patient data:", error);
     res
@@ -454,8 +461,8 @@ const editPatientDataById = async (req, res) => {
       await connection.query(sql, [patientId]);
       if (diag.id) {
         const [updateResult] = await connection.query(
-          `UPDATE patient_diagnoses SET date = ?, icd10 = ?, diagnosis = ?, status = ?, type = ? WHERE id = ? AND patient_id = ?`,
-          [diag.date, diag.icd10, diag.diagnosis, diag.status, diag.type, diag.id, patientId]
+          ` INSERT INTO patient_diagnoses (id,date, icd10, diagnosis, status, patient_id , type) VALUES (?, ?, ?, ?, ?, ?,?)`,
+          [diag.id, diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
         );
         console.log("Update Result for ID:", diag.id, updateResult);
       } else {

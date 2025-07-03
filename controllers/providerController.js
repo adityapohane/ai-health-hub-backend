@@ -199,6 +199,47 @@ LIMIT 1
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
+const addPatientBillingNote =  async (req, res) => {
+  try {
+    const {
+      patientId,
+      category,
+      duration,
+      note
+    } = { ...req.body, ...req.query };
+    const { user_id } = req.user;
+    if (!patientId  || !category || !duration) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: patient_id, timed_by, category, duration are required.'
+      });
+    }
+
+    // Insert
+    const sql = `
+      INSERT INTO patient_billing_notes
+      (patient_id, timed_by, category, duration, note)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+      patientId,
+      user_id,
+      category,
+      duration,
+      note || 'Note Not provided'
+    ];
+    await connection.query(sql, values);
+
+    res.status(201).json({
+      success: true,
+      message: 'Billing note added successfully.'
+    });
+  } catch (err) {
+    console.error('Error adding billing note:', err);
+    res.status(500).json({success:false, message: 'Internal server error.' });
+  }
+};
 
 module.exports = {
   getAllOrganizations,
@@ -206,5 +247,6 @@ module.exports = {
   updateUserMapping,
   getProviders,
   updateProviderInformation,
-  getProviderInformation
+  getProviderInformation,
+  addPatientBillingNote
 };

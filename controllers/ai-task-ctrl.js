@@ -71,9 +71,7 @@ const deleteTask = async (req, res) => {
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
-};
-
-const db = require('../db');
+}
 
 // ========== AI & Analytics ==========
 async function getTaskAnalytics(req, res) {
