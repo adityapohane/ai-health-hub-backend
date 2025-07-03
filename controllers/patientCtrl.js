@@ -455,23 +455,36 @@ const editPatientDataById = async (req, res) => {
 
 
     // 6. Update diagnosis
-    for (const diag of diagnosis || []) {
-      console.log("Processing diagnosis entry:", diag);
-      const sql = `DELETE FROM patient_diagnoses WHERE patient_id = ?`;
-      await connection.query(sql, [patientId]);
-      if (diag.id) {
-        const [updateResult] = await connection.query(
-          ` INSERT INTO patient_diagnoses (id,date, icd10, diagnosis, status, patient_id , type) VALUES (?, ?, ?, ?, ?, ?,?)`,
-          [diag.id, diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
-        );
-        console.log("Update Result for ID:", diag.id, updateResult);
-      } else {
-        const [insertResult] = await connection.query(
-          `INSERT INTO patient_diagnoses (date, icd10, diagnosis, status, patient_id , type) VALUES (?, ?, ?, ?, ?, ?)`,
-          [diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
-        );
-        console.log("Inserted new diagnosis with result:", insertResult);
+    if (diagnosis && diagnosis.length > 0) {
+      console.log(`Deleting old diagnoses for patient_id = ${patientId}`);
+      
+      // Step 1: Delete old entries ONCE
+      await connection.query(
+        `DELETE FROM patient_diagnoses WHERE patient_id = ?`,
+        [patientId]
+      );
+    
+      for (const diag of diagnosis) {
+        if (diag.id) {
+          await connection.query(
+            `INSERT INTO patient_diagnoses (id, date, icd10, diagnosis, status, patient_id, type)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [diag.id, diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
+          );
+          console.log("Inserted with existing ID:", diag.id);
+        } else {
+          await connection.query(
+            `INSERT INTO patient_diagnoses (date, icd10, diagnosis, status, patient_id, type)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
+          );
+          console.log("Inserted new diagnosis entry without ID");
+        }
       }
+    
+      console.log("All new diagnosis entries inserted for patient:", patientId);
+    } else {
+      console.log("No diagnosis entries provided; skipping update.");
     }
 
 
