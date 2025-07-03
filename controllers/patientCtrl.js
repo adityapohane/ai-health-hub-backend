@@ -1230,6 +1230,140 @@ console.log(upcomingTasks,overdueTasks)
     overdue: overdueTasks
   });
 };
+const addPatientAllergy = async (req, res) => {
+  const { category, allergen, reaction, patientId } = { ...req.body, ...req.query };
+
+  if (!category || !allergen || !reaction || !patientId) {
+    return res.status(400).json({ message: 'Missing fields' });
+  }
+
+  try {
+    const sql = `INSERT INTO allergies (category, allergen, reaction, patient_id) VALUES (?, ?, ?, ?)`;
+    const [result] = await connection.execute(sql, [
+      category,
+      allergen,
+      reaction,
+      patientId,
+    ]);
+    res.status(201).json({ message: 'Allergy added', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ message: 'DB error', error: error.message });
+  }
+}
+const addPatientInsurance = async (req, res) => {
+  const {
+    policyNumber,
+    groupNumber,
+    company,
+    plan,
+    expirationDate,
+    type,
+    effectiveDate,
+    patientId,
+  } = { ...req.body, ...req.query };
+
+  // Basic validation
+  if (
+    !policyNumber || !groupNumber || !company ||
+    !plan || !expirationDate || !type || !effectiveDate || !fk_userid
+  ) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+
+    const sql = `
+      INSERT INTO patient_insurances (
+        insurance_policy_number,
+        insurance_group_number,
+        insurance_company,
+        insurance_plan,
+        insurance_expiry,
+        insurance_type,
+        effective_date,
+        fk_userid
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    const values = [
+      policyNumber,
+      groupNumber,
+      company,
+      plan,
+      expirationDate,
+      type,
+      effectiveDate,
+      patientId,
+    ];
+
+    const [result] = await connection.execute(sql, values);
+
+
+    res.status(201).json({
+      message: 'Insurance record added successfully',
+      patient_insurance_id: result.insertId,
+    });
+
+  } catch (error) {
+    console.error('DB Error:', error.message);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+};
+const addPatientMedication = async (req, res) => {
+  const {
+    patientId,
+    name,
+    dosage,
+    frequency,
+    prescribedBy,
+    startDate,
+    endDate,
+    status,
+  } = { ...req.body, ...req.query };
+
+  // Basic validation
+  if (
+    !patientId || !name || !dosage || !frequency ||
+    !prescribedBy || !startDate || !endDate || !status
+  ) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  try {
+    const sql = `
+      INSERT INTO patient_medication (
+        patient_id,
+        name,
+        dosage,
+        frequency,
+        prescribedBy,
+        startDate,
+        endDate,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    const values = [
+      patientId,
+      name,
+      dosage,
+      frequency,
+      prescribedBy,
+      startDate,
+      endDate,
+      status,
+    ];
+
+    const [result] = await connection.execute(sql, values);
+
+    res.status(201).json({
+      message: 'Medication added successfully',
+      medication_id: result.insertId,
+    });
+  } catch (error) {
+    console.error('Error adding medication:', error.message);
+    res.status(500).json({ message: 'Database error', error: error.message });
+  }
+};
 
 module.exports = {
   addPatient,
@@ -1248,5 +1382,8 @@ module.exports = {
   getPatientDiagnosis,
   addPatientNotes,
   getPatientNotes,
-  getUpcomingAndOverdueTasks
+  getUpcomingAndOverdueTasks,
+  addPatientAllergy,
+  addPatientInsurance,
+  addPatientMedication
 };
