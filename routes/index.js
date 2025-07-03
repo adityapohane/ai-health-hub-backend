@@ -13,7 +13,11 @@ const appointmentRoutes = require('./appointmentRoutes');
 const awsRoute = require('./awsUpload');
 const tasksRoutes = require('./tasksRoutes');
 const workFlowRoutes = require('./workFlowRoutes');
-router.use('/work-flow', verifyToken, workFlowRoutes);
+const mioRoutes = require('./mioConnectProxyRoutes');
+
+
+
+
 // Public routes (no auth required)
 router.use('/auth', authRoutes);
 router.use('/ring-central', ringCentralRoute);
@@ -25,6 +29,10 @@ router.use('/settings', verifyToken, settingsRoutes);
 router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
 router.use('/patient', verifyToken, tasksRoutes);
+router.use('/work-flow', verifyToken, workFlowRoutes);
+router.use('/mio',  mioRoutes);
+
+
 router.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
