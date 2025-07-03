@@ -1383,24 +1383,36 @@ const getPatientTimings = async (req, res) => {
         CEIL((
           (SELECT IFNULL(SUM(duration), 0)
            FROM patient_billing_notes
-           WHERE patient_id = ? AND timed_by = ?) +
-           
+           WHERE patient_id = ? AND timed_by = ? 
+             AND MONTH(created) = MONTH(CURRENT_DATE())
+             AND YEAR(created) = YEAR(CURRENT_DATE())) +
+    
           (SELECT IFNULL(SUM(duration), 0)
            FROM tasks
-           WHERE patient_id = ? AND created_by = ?)
+           WHERE patient_id = ? AND created_by = ? 
+             AND MONTH(created) = MONTH(CURRENT_DATE())
+             AND YEAR(created) = YEAR(CURRENT_DATE()))
         ) / 60) AS total_minutes
       `,
       [patientId, user_id, patientId, user_id]
     );
+    
     const [billingNotes] = await connection.query(
-      `SELECT * FROM patient_billing_notes WHERE patient_id = ? AND timed_by = ?`,
+      `SELECT duration,note as title,category,created, 'note' as billing FROM patient_billing_notes 
+       WHERE patient_id = ? AND timed_by = ?
+         AND MONTH(created) = MONTH(CURRENT_DATE())
+         AND YEAR(created) = YEAR(CURRENT_DATE()) ORDER BY created DESC`,
       [patientId, user_id]
     );
-
+    
     const [tasks] = await connection.query(
-      `SELECT * FROM tasks WHERE patient_id = ? AND created_by = ?`,
+      `SELECT  task_title as title,duration,type as category,created, 'task' as billing FROM tasks 
+       WHERE patient_id = ? AND created_by = ?
+         AND MONTH(created) = MONTH(CURRENT_DATE())
+         AND YEAR(created) = YEAR(CURRENT_DATE()) ORDER BY created DESC`,
       [patientId, user_id]
     );
+    
     res.status(200).json({
       success: true,
       message: 'Patient timings fetched successfully',
