@@ -92,19 +92,45 @@ const loginCtrl = async (req, res) => {
 
     let updateQ = `UPDATE users SET user_token = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
     const result = await connection.query(updateQ, [token, user.user_id]);
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user.user_id,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        email: user.username,
-        role: user.fk_roleid,
-      },
 
-      message: "User login successful.",
-    });
+    
+  const options = {
+  httpOnly: true,       // Token cookie will not be accessible by JS
+  secure: true,         // Only sent over HTTPS
+  sameSite: "Strict",   // Protect from CSRF
+  maxAge: 24 * 60 * 60 * 1000, // 1 day
+};
+
+// Token cookie (secure)
+res.cookie("token", token, options);
+
+// User cookie (can be accessed by frontend if needed)
+res.cookie("user", JSON.stringify({
+  id: user.user_id,
+  firstname: user.firstname,
+  lastname: user.lastname,
+  email: user.username,
+  role: user.fk_roleid
+}), {
+  httpOnly: false,      // This cookie *can* be accessed via JS (if needed)
+  secure: true,
+  sameSite: "Strict",
+  maxAge: 24 * 60 * 60 * 1000
+});
+
+// Final response
+res.status(200).json({
+  success: true,
+  token,
+  user: {
+    id: user.user_id,
+    firstname: user.firstname,
+    lastname: user.lastname,
+    email: user.username,
+    role: user.fk_roleid
+  }
+});
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({

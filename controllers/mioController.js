@@ -57,4 +57,3 @@ exports.listTelemetryWithRange  = async (req, res) => {
     });
   }
 };
-;
