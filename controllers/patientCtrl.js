@@ -259,7 +259,7 @@ const getPatientDataById = async (req, res) => {
     WHEN service_type = 1 THEN 'CCM'
     WHEN service_type = 2 THEN 'PCM'
     ELSE 'NA'
-  END AS patientService
+  END AS service_type
   FROM user_profiles 
   LEFT JOIN users u on u.user_id = user_profiles.fk_userid
   WHERE fk_userid = ?`,
