@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const connection = require("../config/db");
+const moment = require('moment');
 
 
 // Create patient
@@ -1369,13 +1370,17 @@ const addPatientMedication = async (req, res) => {
   }
 };
 const getPatientTimings = async (req, res) => {
-  let { patientId, user_id } = { ...req.query, ...req.body };
-   user_id = 13
+  let { patientId, date } = { ...req.query, ...req.body };
+  let user_id = req.user.user_id;
 
   if (!patientId || !user_id) {
     return res.status(400).json({ error: 'Missing patientId or provider_id' });
   }
 
+  const queryDate = date ? moment(date) : moment();
+  const startDate = queryDate.clone().startOf('month').format('YYYY-MM-DD HH:mm:ss');
+  const endDate = queryDate.clone().endOf('month').format('YYYY-MM-DD HH:mm:ss');
+  console.log(patientId, user_id, patientId, user_id)
   try {
     const [rows] = await connection.query(
       `
@@ -1384,40 +1389,45 @@ const getPatientTimings = async (req, res) => {
           (SELECT IFNULL(SUM(duration), 0)
            FROM patient_billing_notes
            WHERE patient_id = ? AND timed_by = ? 
-             AND MONTH(created) = MONTH(CURRENT_DATE())
-             AND YEAR(created) = YEAR(CURRENT_DATE())) +
+             AND created BETWEEN '${startDate}' AND '${endDate}') +
     
           (SELECT IFNULL(SUM(duration), 0)
            FROM tasks
            WHERE patient_id = ? AND created_by = ? 
-             AND MONTH(created) = MONTH(CURRENT_DATE())
-             AND YEAR(created) = YEAR(CURRENT_DATE()))
+             AND created BETWEEN '${startDate}' AND '${endDate}')
         ) / 60) AS total_minutes
       `,
       [patientId, user_id, patientId, user_id]
     );
-    
+
     const [billingNotes] = await connection.query(
-      `SELECT duration,note as title,category,created, 'note' as billing FROM patient_billing_notes 
-       WHERE patient_id = ? AND timed_by = ?
-         AND MONTH(created) = MONTH(CURRENT_DATE())
-         AND YEAR(created) = YEAR(CURRENT_DATE()) ORDER BY created DESC`,
+      `
+      SELECT duration, note as title, category, created, 'note' as billing 
+      FROM patient_billing_notes 
+      WHERE patient_id = ? AND timed_by = ? 
+        AND created BETWEEN '${startDate}' AND '${endDate}'
+      ORDER BY created DESC
+      `,
       [patientId, user_id]
     );
-    
+
     const [tasks] = await connection.query(
-      `SELECT  task_title as title,duration,type as category,created, 'task' as billing FROM tasks 
-       WHERE patient_id = ? AND created_by = ?
-         AND MONTH(created) = MONTH(CURRENT_DATE())
-         AND YEAR(created) = YEAR(CURRENT_DATE()) ORDER BY created DESC`,
+      `
+      SELECT task_title as title, duration, type as category, created, 'task' as billing 
+      FROM tasks 
+      WHERE patient_id = ? AND created_by = ? 
+        AND created BETWEEN '${startDate}' AND '${endDate}'
+      ORDER BY created DESC
+      `,
       [patientId, user_id]
     );
-    
+
     res.status(200).json({
       success: true,
       message: 'Patient timings fetched successfully',
       totalMinutes: rows.length ? rows[0].total_minutes : 0,
-      entries: [...billingNotes, ...tasks]
+      entries: [...billingNotes, ...tasks],
+      filterRange: { startDate, endDate }
     });
   } catch (error) {
     console.error('Error fetching patient timings:', error.message);
@@ -1428,6 +1438,7 @@ const getPatientTimings = async (req, res) => {
     });
   }
 };
+
 module.exports = {
   addPatient,
   getPatientDataById,
