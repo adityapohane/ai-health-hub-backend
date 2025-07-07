@@ -1453,6 +1453,7 @@ const getPatientTimings = async (req, res) => {
       success: true,
       message: 'Patient timings fetched successfully',
       totalMinutes: rows.length ? rows[0].total_minutes : 0,
+      totalAmount: 89.9,
       entries: [...billingNotes, ...tasks],
       filterRange: { startDate, endDate }
     });
