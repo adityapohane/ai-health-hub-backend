@@ -14,7 +14,6 @@ const addPatient = async (req, res) => {
       phone,
       gender,
       status,
-      address,
       birthDate,
       lastVisit,
       emergencyContact,
@@ -38,9 +37,19 @@ const addPatient = async (req, res) => {
       zipCode,
       organizationId,
       practiceId,
-      nurseId
+      nurseId,
+      patientService
     } = req.body;
     let password = `${firstName}@hub`;
+
+      const [rows] = await connection.execute(
+    'SELECT 1 FROM users WHERE username = ? LIMIT 1',
+    [email]
+  );
+  if (rows.length > 0) {
+    return res.status(401).send({ success: false,error: 'Username already exists' });
+  }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const insertQuery =
       "INSERT INTO users (username, password,fk_roleid,created_user_id) VALUES (?, ?,7,?)";
@@ -54,9 +63,9 @@ INSERT INTO user_profiles (
   firstname, middlename, lastname, dob, work_email, phone,
   gender, ethnicity, last_visit, emergency_contact,
   height, dry_weight, bmi, fk_userid, status, bp, heart_rate, temp,
-  address_line,address_line_2, city, state, country, zip
+  address_line,address_line_2, city, state, country, zip,service_type
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   `;
 
     const values1 = [
@@ -83,8 +92,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       city,
       state,
       country,
-      zipCode, // 14–16 ✅
-      // 17–19 ✅
+      zipCode, 
+      patientService
     ];
 
     const [userResult] = await connection.query(sql1, values1);
@@ -245,7 +254,12 @@ const getPatientDataById = async (req, res) => {
       WHEN 3 THEN 'Normal'
       ELSE 'NA'
     END AS status,
-    u.created
+    u.created,
+        CASE 
+    WHEN service_type = 1 THEN 'CCM'
+    WHEN service_type = 2 THEN 'PCM'
+    ELSE 'NA'
+  END AS patientService
   FROM user_profiles 
   LEFT JOIN users u on u.user_id = user_profiles.fk_userid
   WHERE fk_userid = ?`,
@@ -343,6 +357,7 @@ const getPatientDataById = async (req, res) => {
         bloodPressure: profile.bp,
         heartRate: profile.heart_rate,
         temperature: profile.temp,
+        patientService: profile.service_type,
         allergies,
         insurance: insurances,
         currentMedications,
@@ -405,6 +420,7 @@ const editPatientDataById = async (req, res) => {
       currentMedications,
       diagnosis,
       notes,
+      patientService
     } = req.body;
 
     // 1. Update user profile
@@ -413,7 +429,7 @@ const editPatientDataById = async (req, res) => {
       firstname = ?, middlename = ?, lastname = ?, dob = ?, work_email = ?, phone = ?,
       gender = ?, ethnicity = ?, last_visit = ?, emergency_contact = ?, height = ?,
       dry_weight = ?, bmi = ?, status = ?, address_line = ?, address_line_2 = ?, city = ?,
-      state = ?, country = ?, zip = ?, bp = ?, heart_rate = ?, temp = ?
+      state = ?, country = ?, zip = ?, bp = ?, heart_rate = ?, temp = ?,service_type =?
     WHERE fk_userid = ?;
   `;
 
@@ -441,7 +457,8 @@ const editPatientDataById = async (req, res) => {
       bloodPressure,
       heartRate,
       temperature,
-      patientId, // for WHERE clause
+      patientService,
+      patientId // for WHERE clause
     ];
     await connection.query(profileQuery, profileValues);
 
@@ -449,7 +466,7 @@ const editPatientDataById = async (req, res) => {
     await connection.query(`UPDATE users SET username = ? WHERE user_id = ?`, [
       email,
       patientId,
-    ]);
+    ]); 
 
 
 
@@ -587,8 +604,8 @@ const editPatientDataById = async (req, res) => {
         console.log("Updated note ID:", note.note_id, result);
       } else {
         const [result] = await connection.query(
-          `INSERT INTO notes (note, patient_id, created, created_by) VALUES (?, ?, ?, ?)`,
-          [note.note, patientId, note.created, note.created_by || null]
+          `INSERT INTO notes (note, patient_id, created_by) VALUES (?, ?, ?)`,
+          [note.note, patientId,  note.created_by || null]
         );
         console.log("Inserted new note:", result);
       }
@@ -658,7 +675,12 @@ WHEN 2 THEN 'Abnormal'
 WHEN 3 THEN 'Normal'
 ELSE 'NA'
 END AS status,
-    address_line AS address
+    address_line AS address,
+    CASE 
+    WHEN service_type = 1 THEN 'CCM'
+    WHEN service_type = 2 THEN 'PCM'
+    ELSE 'NA'
+  END AS patientService
   FROM user_profiles`
       + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
     if (roleid == 6) {
@@ -767,7 +789,12 @@ const getPatientMonitoringData = async (req, res) => {
     WHEN 2 THEN 'Abnormal'
     WHEN 3 THEN 'Normal'
     ELSE 'NA'
-  END AS status
+  END AS status,
+      CASE 
+    WHEN service_type = 1 THEN 'CCM'
+    WHEN service_type = 2 THEN 'PCM'
+    ELSE 'NA'
+  END AS patientService
 FROM user_profiles
 ORDER BY last_visit DESC
 LIMIT ? OFFSET ?;
