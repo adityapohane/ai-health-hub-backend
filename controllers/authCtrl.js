@@ -1,7 +1,12 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const connection = require('../config/db');
+const mailSender = require("../utils/mailSender");
+const otpTemplate = require("../template/emailVerificationTemplate");
 
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 
 const registerCtrl = async (req, res) => {
@@ -85,51 +90,28 @@ const loginCtrl = async (req, res) => {
       });
     }
 
+    const otp = generateOtp();
+
+    const emailRes = await mailSender(
+      email,
+      "AI Health Hub – 2FA Code for Login",
+      otpTemplate(otp)
+        );
+
+
     const token = jwt.sign(
       { username: email, user_id: rows[0].user_id,roleid:rows[0].fk_roleid },
       process.env.JWT_SECRET
     );
 
-    let updateQ = `UPDATE users SET user_token = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
-    const result = await connection.query(updateQ, [token, user.user_id]);
+    let update1 = `UPDATE users SET user_token = ?,mfa_code = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
+    const result1 = await connection.query(update1, [token,otp, user.user_id]);
 
-    
-  const options = {
-  httpOnly: true,       // Token cookie will not be accessible by JS
-  secure: true,         // Only sent over HTTPS
-  sameSite: "Strict",   // Protect from CSRF
-  maxAge: 24 * 60 * 60 * 1000, // 1 day
-};
-
-// Token cookie (secure)
-res.cookie("token", token, options);
-
-// User cookie (can be accessed by frontend if needed)
-res.cookie("user", JSON.stringify({
-  id: user.user_id,
-  firstname: user.firstname,
-  lastname: user.lastname,
-  email: user.username,
-  role: user.fk_roleid
-}), {
-  httpOnly: false,      // This cookie *can* be accessed via JS (if needed)
-  secure: true,
-  sameSite: "Strict",
-  maxAge: 24 * 60 * 60 * 1000
-});
-
-// Final response
-res.status(200).json({
-  success: true,
-  token,
-  user: {
-    id: user.user_id,
-    firstname: user.firstname,
-    lastname: user.lastname,
-    email: user.username,
-    role: user.fk_roleid
-  }
-});
+    return res.status(200).json({
+      success: true,
+      token,
+      message: "OTP sent successfully"
+    });
 
   } catch (error) {
     console.error(error);
@@ -200,10 +182,59 @@ const changePasswordCtrl = async (req, res) => {
   }
 };
 
+const verifyOtpCtrl = async (req, res) => {
+  const { otp, token } = req.body;
 
+  try {
+    // Use the same connection as the rest of the file
+    const [rows] = await connection.query(
+      `SELECT user_id, mfa_code FROM users WHERE user_token = ?`,
+      [token]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'User not found for this token.' });
+    }
+
+    const { mfa_code, user_id } = rows[0];
+
+    if (mfa_code !== otp) {
+      return res.status(401).json({ success: false, message: 'Invalid OTP.' });
+    }
+
+    // ✅ OTP matched – update user row
+    await connection.query(
+      `UPDATE users SET mfa_code = NULL, modified = CURRENT_TIMESTAMP WHERE user_id = ?`,
+      [user_id]
+    );
+
+    let userQuery = `SELECT u.*, up.firstname, up.lastname, up.work_email FROM users u LEFT JOIN user_profiles up ON up.fk_userid = u.user_id WHERE u.user_id = ?`;
+    const [userResult] = await connection.query(userQuery, [user_id]);
+
+    let user = userResult[0];
+    // ✅ Send response ONLY if OTP is valid
+    return res.status(200).json({
+       success: true,
+       token,
+       user: {
+         id: user.user_id,
+         firstname: user.firstname,
+         lastname: user.lastname,
+         email: user.username,
+         role: user.fk_roleid
+       },
+        message: 'MFA verified'
+       });
+
+  } catch (err) {
+    console.error('MFA verification error:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error during MFA verification.' });
+  }
+};
 
 module.exports = {
   registerCtrl,
   loginCtrl,
-  changePasswordCtrl
+  changePasswordCtrl,
+  verifyOtpCtrl
 };
