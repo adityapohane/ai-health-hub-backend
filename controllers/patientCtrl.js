@@ -93,7 +93,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
       state,
       country,
       zipCode, 
-      patientService
+      JSON.stringify(patientService)
     ];
 
     const [userResult] = await connection.query(sql1, values1);
@@ -205,6 +205,13 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
       nurseId ? nurseId : 0,
     ];
     const [mappingResult] = await connection.query(sql7, values7);
+
+    // cpt billing for rpm
+    patientService?.includes(1) && await connection.query(
+      `INSERT INTO cpt_billing (patient_id, cpt_code_id) VALUES (?, ?);`,
+      [insertedId, 4]
+    );
+ 
     return res.status(200).json({
       success: true,
       message: "User registered successfully",
@@ -255,11 +262,7 @@ const getPatientDataById = async (req, res) => {
       ELSE 'NA'
     END AS status,
     u.created,
-        CASE 
-    WHEN service_type = 1 THEN 'CCM'
-    WHEN service_type = 2 THEN 'PCM'
-    ELSE 'NA'
-  END AS service_type
+    service_type
   FROM user_profiles 
   LEFT JOIN users u on u.user_id = user_profiles.fk_userid
   WHERE fk_userid = ?`,
@@ -457,7 +460,7 @@ const editPatientDataById = async (req, res) => {
       bloodPressure,
       heartRate,
       temperature,
-      patientService,
+      JSON.stringify(patientService),
       patientId // for WHERE clause
     ];
     await connection.query(profileQuery, profileValues);
@@ -676,11 +679,7 @@ WHEN 3 THEN 'Normal'
 ELSE 'NA'
 END AS status,
     address_line AS address,
-    CASE 
-    WHEN service_type = 1 THEN 'CCM'
-    WHEN service_type = 2 THEN 'PCM'
-    ELSE 'NA'
-  END AS patientService
+   service_type
   FROM user_profiles`
       + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
     if (roleid == 6) {
