@@ -11,7 +11,7 @@ const resetPasswordTokenCtrl = async (req, res) => {
     // Find patient by email inside JSON field (assuming email is top-level)
     const [rows] = await connection
       .promise()
-      .query("SELECT * FROM patients WHERE JSON_UNQUOTE(JSON_EXTRACT(contactDetails, '$.email')) = ?", [email]);
+      .query("SELECT * FROM users where username = ?", [email]);
 
     if (rows.length === 0) {
       return res.json({
@@ -26,7 +26,7 @@ const resetPasswordTokenCtrl = async (req, res) => {
     await connection
       .promise()
       .query(
-        "UPDATE patients SET token = ?, resetPasswordExpires = ? WHERE JSON_UNQUOTE(JSON_EXTRACT(contactDetails, '$.email')) = ?",
+        "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE username = ?",
         [token, expires, email]
       );
 
@@ -42,7 +42,7 @@ const resetPasswordTokenCtrl = async (req, res) => {
       message: "Email sent successfully. Check your inbox.",
     });
   } catch (error) {
-    console.error("Error in resetPasswordTokenCtrl:", error);
+    console.error("Error while sending password reset email:", error);
     res.json({
       success: false,
       message: "Error sending password reset email.",
@@ -65,7 +65,7 @@ const resetPasswordCtrl = async (req, res) => {
 
     const [rows] = await connection
       .promise()
-      .query("SELECT * FROM patients WHERE token = ?", [token]);
+      .query("SELECT * FROM users WHERE reset_token = ?", [token]);
 
     if (rows.length === 0) {
       return res.json({
@@ -75,7 +75,7 @@ const resetPasswordCtrl = async (req, res) => {
     }
 
     const user = rows[0];
-    if (user.resetPasswordExpires < Date.now()) {
+    if (user.reset_token_expires < Date.now()) {
       return res.status(403).json({
         success: false,
         message: "Token has expired. Please request a new one.",
@@ -86,7 +86,7 @@ const resetPasswordCtrl = async (req, res) => {
 
     await connection
       .promise()
-      .query("UPDATE patients SET password = ?, token = NULL, resetPasswordExpires = NULL WHERE token = ?", [
+      .query("UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ?", [
         encryptedPassword,
         token,
       ]);
