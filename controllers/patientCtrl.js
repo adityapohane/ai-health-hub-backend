@@ -1560,40 +1560,43 @@ const fetchDataByPatientId = async (req, res) => {
     // Get user profile
     const [profileRows] = await connection.query(
       `SELECT 
-    firstname,
-    middlename,
-    lastname,
-    work_email,
-    phone,
-    gender,
-    address_line,
-    address_line_2,
-    city,
-    state,
-    country,
-    zip,
-    dob,
-    last_visit,
-    emergency_contact,
-    ethnicity,
-    height,
-    dry_weight,
-    bmi,
-    bp,
-    patient_condition,
-    heart_rate,
-    temp,
-    CASE (status)
+    up.firstname,
+    up.middlename,
+    up.lastname,
+    up.work_email,
+    up.phone,
+    up.gender,
+    up.address_line,
+    up.address_line_2,
+    up.city,
+    up.state,
+    up.country,
+    up.zip,
+    up.dob,
+    up.last_visit,
+    up.emergency_contact,
+    up.ethnicity,
+    up.height,
+    up.dry_weight,
+    up.bmi,
+    up.bp,
+    up.patient_condition,
+    up.heart_rate,
+    up.temp,
+    CASE (up.status)
       WHEN 1 THEN 'Critical'
       WHEN 2 THEN 'Abnormal'
       WHEN 3 THEN 'Normal'
       ELSE 'NA'
     END AS status,
     u.created,
-    service_type
-  FROM user_profiles 
-  LEFT JOIN users u on u.user_id = user_profiles.fk_userid
-  WHERE fk_userid = ?`,
+    up.service_type,
+   CONCAT(up2.firstname," ",up2.lastname) as physicianName
+  FROM user_profiles up
+  LEFT JOIN users u on u.user_id = up.fk_userid
+  LEFT JOIN users_mappings um ON um.user_id = up.fk_userid
+  LEFT JOIN user_profiles up2 ON up2.fk_userid = um.fk_physician_id
+  WHERE up.fk_userid = ?`,
       [patientId]
     );
 
