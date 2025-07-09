@@ -47,7 +47,8 @@ const addPatient = async (req, res) => {
     [email]
   );
   if (rows.length > 0) {
-    return res.status(401).send({ success: false,error: 'Username already exists' });
+
+    return res.status(401).send({ success: false, message: 'email already exists' });
   }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -108,6 +109,23 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
       ];
       const [allergyResult] = await connection.query(sql2, values2);
     });
+
+
+    const vitalsSql = `
+  INSERT INTO patient_vitals 
+  (patient_id, height, weight, bmi, blood_pressure, heart_rate, temperature) 
+  VALUES (?, ?, ?, ?, ?, ?, ?)
+`;
+await connection.query(vitalsSql, [
+  insertedId,
+  height || 0,
+  weight || 0,
+  bmi || 0,
+  bloodPressure || '0/0',
+  heartRate || 0,
+  temperature || 0,
+]);
+
 
     const sql3 = `INSERT INTO patient_insurances (
   insurance_policy_number,
@@ -1466,6 +1484,73 @@ const getPatientTimings = async (req, res) => {
   }
 };
 
+
+const addPatientVitals = async (req, res) => {
+  try {
+    const {
+      height = 0,
+      weight = 0,
+      bmi = 0,
+      bloodPressure = "0/0",
+      heartRate = 0,
+      temperature = 0,
+    } = req.body;
+
+    const patient_id = req.params.patientId;
+
+    if (!patient_id) {
+      return res.status(400).json({ success: false, message: "Patient ID is required." });
+    }
+
+    // Insert into patient_vitals
+    const vitalsSql = `
+      INSERT INTO patient_vitals 
+      (patient_id, height, weight, bmi, blood_pressure, heart_rate, temperature) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    await connection.query(vitalsSql, [
+      patient_id,
+      height,
+      weight,
+      bmi,
+      bloodPressure,
+      heartRate,
+      temperature,
+    ]);
+
+    // Update vitals in user_profiles
+    const profileUpdateSql = `
+      UPDATE user_profiles 
+      SET height = ?, dry_weight = ?, bmi = ?, bp = ?, heart_rate = ?, temp = ?
+      WHERE fk_userid = ?
+    `;
+    await connection.query(profileUpdateSql, [
+      height,
+      weight,
+      bmi,
+      bloodPressure,
+      heartRate,
+      temperature,
+      patient_id,
+    ]);
+
+    return res.status(201).json({
+      success: true,
+      message: "Vitals added successfully and user profile updated.",
+    });
+  } catch (err) {
+    console.error("Error in addPatientVitals:", err);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while adding vitals.",
+      error: err.message || err,
+    });
+  }
+};
+
+
+
+
 module.exports = {
   addPatient,
   getPatientDataById,
@@ -1488,4 +1573,5 @@ module.exports = {
   addPatientInsurance,
   addPatientMedication,
   getPatientTimings,
+  addPatientVitals
 };
