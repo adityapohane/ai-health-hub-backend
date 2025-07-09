@@ -1547,6 +1547,188 @@ const addPatientVitals = async (req, res) => {
     });
   }
 };
+const fetchDataByPatientId = async (req, res) => {
+  try {
+    const { patientId,date } = {...req.query,...req.params,...req.body};
+    // const {user_id} = req.user;
+    const targetDate = date ? new Date(date) : new Date();
+    
+    // Get first and last day of the target month
+    const startOfMonth = formatDateToMySQL(new Date(targetDate.getFullYear(), targetDate.getMonth(), 1));
+    const endOfMonth = formatDateToMySQL(new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59));
+    // console.log(patientId)
+    // Get user profile
+    const [profileRows] = await connection.query(
+      `SELECT 
+    firstname,
+    middlename,
+    lastname,
+    work_email,
+    phone,
+    gender,
+    address_line,
+    address_line_2,
+    city,
+    state,
+    country,
+    zip,
+    dob,
+    last_visit,
+    emergency_contact,
+    ethnicity,
+    height,
+    dry_weight,
+    bmi,
+    bp,
+    patient_condition,
+    heart_rate,
+    temp,
+    CASE (status)
+      WHEN 1 THEN 'Critical'
+      WHEN 2 THEN 'Abnormal'
+      WHEN 3 THEN 'Normal'
+      ELSE 'NA'
+    END AS status,
+    u.created,
+    service_type
+  FROM user_profiles 
+  LEFT JOIN users u on u.user_id = user_profiles.fk_userid
+  WHERE fk_userid = ?`,
+      [patientId]
+    );
+
+    const profile = profileRows[0];
+
+    // Get user login/email info
+    const [userRows] = await connection.query(
+      `SELECT username FROM users WHERE user_id = ?`,
+      [patientId]
+    );
+    const user = userRows[0];
+
+
+
+    
+      const [allergies] = await connection.query(
+        `SELECT
+            CASE category
+              WHEN 1 THEN 'food'
+              WHEN 2 THEN 'medication'
+              WHEN 3 THEN 'envoirment'
+              WHEN 4 THEN 'biological'
+              ELSE NULL
+            END AS category,
+            allergen,
+            reaction,
+            id,
+            created
+          FROM allergies
+          WHERE patient_id = ?
+            AND created BETWEEN ? AND ?`,
+        [patientId, startOfMonth, endOfMonth]
+      );
+    
+  
+
+    // Get medications
+    const [currentMedications] = await connection.query(
+      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id
+       FROM patient_medication
+       WHERE patient_id = ?
+         AND created_at BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+
+    // Get diagnoses
+    const [diagnosis] = await connection.query(
+      `SELECT date, icd10, diagnosis, status, id, type
+       FROM patient_diagnoses
+       WHERE patient_id = ?
+         AND created_at BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+
+    const [notes] = await connection.query(
+      `SELECT note, created, created_by, note_id
+       FROM notes
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+    const [vitals] = await connection.query(
+      `SELECT *
+       FROM patient_vitals
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+    const [tasks] = await connection.query(
+      `SELECT *
+       FROM tasks
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+ 
+
+    // Compose full response
+    if (profile) {
+      const response = {
+        firstName: profile.firstname,
+        middleName: profile.middlename,
+        lastName: profile.lastname,
+        email: profile.work_email || user?.username,
+        phone: profile.phone,
+        gender: profile.gender,
+        status: profile.status,
+        addressLine1: profile.address_line,
+        addressLine2: profile.address_line_2,
+        city: profile.city,
+        state: profile.state,
+        country: profile.country,
+        zipCode: profile.zip,
+        birthDate: profile.dob,
+        lastVisit: profile.last_visit,
+        emergencyContact: profile.emergency_contact,
+        ethnicity: profile.ethnicity,
+        height: profile.height,
+        weight: profile.dry_weight,
+        bmi: profile.bmi,
+        bloodPressure: profile.bp,
+        heartRate: profile.heart_rate,
+        temperature: profile.temp,
+        patientService: profile.service_type,
+        allergies,
+        currentMedications,
+        diagnosis,
+        notes,
+        tasks,
+        vitals,
+        createdBy: notes?.[0]?.created_by || null,
+        created: profile.created,
+        patientId,
+      };
+      return res.status(200).json({
+        success: true,
+        message: "Patient data fetched successfully",
+        data: response,
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "Patient data not found",
+      });
+    }
+
+  } catch (error) {
+    console.error("Error fetching patient data:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error in get patient data API" });
+  }
+};
+const formatDateToMySQL = (date) =>
+  date.toISOString().slice(0, 19).replace('T', ' ');
 
 
 
@@ -1573,5 +1755,6 @@ module.exports = {
   addPatientInsurance,
   addPatientMedication,
   getPatientTimings,
-  addPatientVitals
+  addPatientVitals,
+  fetchDataByPatientId
 };
