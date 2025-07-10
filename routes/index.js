@@ -24,13 +24,13 @@ router.use('/ring-central', ringCentralRoute);
 router.use('/aws', awsRoute);
 
 // Protected routes (require auth)
-router.use('/patient', patientRoutes);
+router.use('/patient', verifyToken, patientRoutes);
 router.use('/settings', verifyToken, settingsRoutes);
 router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
 router.use('/patient', verifyToken, tasksRoutes);
 router.use('/work-flow', verifyToken, workFlowRoutes);
-router.use('/mio',  mioRoutes);
+router.use('/mio', mioRoutes);
 
 
 router.get('/health', (req, res) => {
