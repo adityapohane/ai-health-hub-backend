@@ -1550,14 +1550,11 @@ const addPatientVitals = async (req, res) => {
 const fetchDataByPatientId = async (req, res) => {
   try {
     const { patientId,date } = {...req.query,...req.params,...req.body};
-    // const {user_id} = req.user;
-    const targetDate = date ? new Date(date) : new Date();
-    
-    // Get first and last day of the target month
-    const startOfMonth = formatDateToMySQL(new Date(targetDate.getFullYear(), targetDate.getMonth(), 1));
-    const endOfMonth = formatDateToMySQL(new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59));
+    const {user_id} = req.user;
+    const targetDate = date ? moment(date) : moment();
+const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
+
     // console.log(patientId)
-    // Get user profile
     const [profileRows] = await connection.query(
       `SELECT 
     up.firstname,
@@ -1583,6 +1580,7 @@ const fetchDataByPatientId = async (req, res) => {
     up.patient_condition,
     up.heart_rate,
     up.temp,
+    um.fk_physician_id,
     CASE (up.status)
       WHEN 1 THEN 'Critical'
       WHEN 2 THEN 'Abnormal'
@@ -1672,8 +1670,32 @@ const fetchDataByPatientId = async (req, res) => {
          AND created BETWEEN ? AND ?`,
       [patientId, startOfMonth, endOfMonth]
     );
- 
-
+   // #production
+    const [minutes] = await connection.query(
+      `
+      SELECT
+        CEIL((
+          (SELECT IFNULL(SUM(duration), 0)
+           FROM patient_billing_notes
+           WHERE patient_id = ? AND timed_by = ? 
+             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}') +
+    
+          (SELECT IFNULL(SUM(duration), 0)
+           FROM tasks
+           WHERE patient_id = ? AND created_by = ? 
+             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}')
+        ) / 60) AS total_minutes
+      `,
+      [patientId, user_id, patientId, user_id]
+    );
+    const [billingNotes] = await connection.query(
+      `SELECT note, created, (duration/60) as duration
+       FROM patient_billing_notes
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+    let minutesObj = calculateBilledMinutes(minutes[0]?.total_minutes)
     // Compose full response
     if (profile) {
       const response = {
@@ -1701,16 +1723,20 @@ const fetchDataByPatientId = async (req, res) => {
         heartRate: profile.heart_rate,
         temperature: profile.temp,
         patientService: profile.service_type,
+        physicianId: profile.physicianId,
+        physicianName: profile.physicianName,
         allergies,
         currentMedications,
         diagnosis,
-        notes,
+        notes:[...notes,...billingNotes],
         tasks,
         vitals,
         createdBy: notes?.[0]?.created_by || null,
         created: profile.created,
         patientId,
+        total_minutes: minutesObj
       };
+      console.log(startOfMonth,endOfMonth)
       return res.status(200).json({
         success: true,
         message: "Patient data fetched successfully",
@@ -1730,10 +1756,160 @@ const fetchDataByPatientId = async (req, res) => {
       .json({ success: false, message: "Error in get patient data API" });
   }
 };
-const formatDateToMySQL = (date) =>
-  date.toISOString().slice(0, 19).replace('T', ' ');
+const fetchDataByPatientIdForccm = async (req, res) => {
+  try {
+    const { patientId,date } = {...req.query,...req.params,...req.body};
+    const {user_id} = req.user;
+    const targetDate = date ? moment(date) : moment();
+    const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
+    
+    const [profileRows] = await connection.query(
+      `SELECT 
+    up.firstname,
+    up.middlename,
+    up.lastname,
+    up.work_email,
+    up.phone,
+    up.gender,
+    up.address_line,
+    up.address_line_2,
+    up.city,
+    up.state,
+    up.country,
+    up.zip,
+    up.dob,
+    up.last_visit,
+    up.emergency_contact,
+    up.height,
+    up.dry_weight,
+    up.bmi,
+    up.bp,
+    up.patient_condition,
+    up.heart_rate,
+    up.temp,
+    um.fk_physician_id,
+    CASE (up.status)
+      WHEN 1 THEN 'Critical'
+      WHEN 2 THEN 'Abnormal'
+      WHEN 3 THEN 'Normal'
+      ELSE 'NA'
+    END AS status,
+    u.created,
+    up.service_type,
+   CONCAT(up2.firstname," ",up2.lastname) as physicianName,
+   um.fk_physician_id as physicianId
+  FROM user_profiles up
+  LEFT JOIN users u on u.user_id = up.fk_userid
+  LEFT JOIN users_mappings um ON um.user_id = up.fk_userid
+  LEFT JOIN user_profiles up2 ON up2.fk_userid = um.fk_physician_id
+  WHERE up.fk_userid = ?`,
+      [patientId]
+    );
 
+    const profile = profileRows[0];
 
+    const [userRows] = await connection.query(
+      `SELECT username FROM users WHERE user_id = ?`,
+      [patientId]
+    );
+    const user = userRows[0];
+    //#production
+    const [minutes] = await connection.query(
+      `
+      SELECT
+        CEIL((
+          (SELECT IFNULL(SUM(duration), 0)
+           FROM patient_billing_notes
+           WHERE patient_id = ? AND timed_by = ? 
+             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}') +
+    
+          (SELECT IFNULL(SUM(duration), 0)
+           FROM tasks
+           WHERE patient_id = ? AND created_by = ? 
+             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}')
+        ) / 60) AS total_minutes
+      `,
+      [patientId, profile.fk_physician_id, patientId, profile.fk_physician_id]
+    );
+    
+    const [notes] = await connection.query(
+      `SELECT note, created, created_by, note_id
+       FROM notes
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+    const [billingNotes] = await connection.query(
+      `SELECT note, created, (duration/60) as duration
+       FROM patient_billing_notes
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+
+    let minutesObj = calculateBilledMinutes(minutes[0]?.total_minutes)
+    if (profile) {
+      const response = {
+        firstName: profile.firstname,
+        middleName: profile.middlename,
+        lastName: profile.lastname,
+        email: profile.work_email || user?.username,
+        phone: profile.phone,
+        gender: profile.gender,
+        status: profile.status,
+        addressLine1: profile.address_line,
+        addressLine2: profile.address_line_2,
+        city: profile.city,
+        state: profile.state,
+        country: profile.country,
+        zipCode: profile.zip,
+        birthDate: profile.dob,
+        lastVisit: profile.last_visit,
+        emergencyContact: profile.emergency_contact,
+        patientService: profile.service_type,
+        notes: [...notes,billingNotes],       
+        createdBy: notes?.[0]?.created_by || null,
+        created: profile.created,
+        patientId,
+        timings: minutesObj,
+        providerId: profile.physicianId,
+        providerName: profile.physicianName
+      };
+      console.log(startOfMonth,endOfMonth)
+      return res.status(200).json({
+        success: true,
+        message: "Patient data fetched successfully",
+        data: response,
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "Patient data not found",
+      });
+    }
+
+  } catch (error) {
+    console.error("Error fetching patient data:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error in get patient data API" });
+  }
+};
+const getMonthRange = (targetDate) => {
+  const startOfMonth = moment(targetDate).startOf('month').format('YYYY-MM-DD HH:mm:ss');
+  const endOfMonth = moment(targetDate).endOf('month').format('YYYY-MM-DD HH:mm:ss');
+  return { startOfMonth, endOfMonth };
+};
+
+function calculateBilledMinutes(totalMinutes) {
+  const billed = Math.floor(totalMinutes / 20) * 20;
+  const unbilled = totalMinutes - billed ;
+  return {
+      total: totalMinutes ? totalMinutes : 0,
+      billed: billed ? billed : 0,
+      unbilled: unbilled ? unbilled : 0
+  };
+}
 
 
 module.exports = {
@@ -1759,5 +1935,6 @@ module.exports = {
   addPatientMedication,
   getPatientTimings,
   addPatientVitals,
-  fetchDataByPatientId
+  fetchDataByPatientId,
+  fetchDataByPatientIdForccm
 };
