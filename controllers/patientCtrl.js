@@ -1549,7 +1549,7 @@ const addPatientVitals = async (req, res) => {
 };
 const fetchDataByPatientId = async (req, res) => {
   try {
-    const { patientId,date } = {...req.query,...req.params,...req.body};
+    const { patientId,date } = {...req.query,...req.params,...req.body};``
     const {user_id} = req.user;
     const targetDate = date ? moment(date) : moment();
 const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
@@ -1589,7 +1589,9 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
     END AS status,
     u.created,
     up.service_type,
-   CONCAT(up2.firstname," ",up2.lastname) as physicianName
+   CONCAT(up2.firstname," ",up2.lastname) as physicianName,
+   um.fk_physician_id as physicianId,
+   up2.state as physicianState,up2.city as physicianCity,up2.country as physicianCountry
   FROM user_profiles up
   LEFT JOIN users u on u.user_id = up.fk_userid
   LEFT JOIN users_mappings um ON um.user_id = up.fk_userid
@@ -1725,6 +1727,9 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
         patientService: profile.service_type,
         physicianId: profile.physicianId,
         physicianName: profile.physicianName,
+        physicianState: profile.physicianState,
+        physicianCity: profile.physicianCity,
+        physicianCountry: profile.physicianCountry,
         allergies,
         currentMedications,
         diagnosis,
@@ -1759,7 +1764,7 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
 const fetchDataByPatientIdForccm = async (req, res) => {
   try {
     const { patientId,date } = {...req.query,...req.params,...req.body};
-    const {user_id} = req.user;
+    const {user_id} = req.user ;
     const targetDate = date ? moment(date) : moment();
     const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
     
@@ -1797,7 +1802,8 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     u.created,
     up.service_type,
    CONCAT(up2.firstname," ",up2.lastname) as physicianName,
-   um.fk_physician_id as physicianId
+   um.fk_physician_id as physicianId,
+   up2.state as physicianState,up2.city as physicianCity,up2.country as physicianCountry
   FROM user_profiles up
   LEFT JOIN users u on u.user_id = up.fk_userid
   LEFT JOIN users_mappings um ON um.user_id = up.fk_userid
@@ -1814,6 +1820,52 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     );
     const user = userRows[0];
     //#production
+        // Get medications
+    const [currentMedications] = await connection.query(
+      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id
+       FROM patient_medication
+       WHERE patient_id = ?
+         AND created_at BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+
+    // Get diagnoses
+    const [diagnosis] = await connection.query(
+      `SELECT date, icd10, diagnosis, status, id, type
+       FROM patient_diagnoses
+       WHERE patient_id = ?
+         AND created_at BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+
+    const [notes] = await connection.query(
+      `SELECT note, created, created_by, note_id
+       FROM notes
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+    const [vitals] = await connection.query(
+      `SELECT *
+       FROM patient_vitals
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+    const [tasks] = await connection.query(
+      `SELECT *
+       FROM tasks
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
+    const [billingNotes] = await connection.query(
+      `SELECT note, created, (duration/60) as duration
+       FROM patient_billing_notes
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patientId, startOfMonth, endOfMonth]
+    );
     const [minutes] = await connection.query(
       `
       SELECT
@@ -1831,22 +1883,6 @@ const fetchDataByPatientIdForccm = async (req, res) => {
       `,
       [patientId, profile.fk_physician_id, patientId, profile.fk_physician_id]
     );
-    
-    const [notes] = await connection.query(
-      `SELECT note, created, created_by, note_id
-       FROM notes
-       WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
-      [patientId, startOfMonth, endOfMonth]
-    );
-    const [billingNotes] = await connection.query(
-      `SELECT note, created, (duration/60) as duration
-       FROM patient_billing_notes
-       WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
-      [patientId, startOfMonth, endOfMonth]
-    );
-
     let minutesObj = calculateBilledMinutes(minutes[0]?.total_minutes)
     if (profile) {
       const response = {
@@ -1867,13 +1903,20 @@ const fetchDataByPatientIdForccm = async (req, res) => {
         lastVisit: profile.last_visit,
         emergencyContact: profile.emergency_contact,
         patientService: profile.service_type,
-        notes: [...notes,billingNotes],       
+        notes: [...notes,...billingNotes],       
         createdBy: notes?.[0]?.created_by || null,
         created: profile.created,
         patientId,
         timings: minutesObj,
         providerId: profile.physicianId,
-        providerName: profile.physicianName
+        providerName: profile.physicianName,
+        providerState: profile.physicianState,
+        providerCity: profile.physicianCity,
+        providerCountry: profile.physicianCountry,
+        currentMedications,
+        diagnosis,
+        vitals,
+        tasks,
       };
       console.log(startOfMonth,endOfMonth)
       return res.status(200).json({
