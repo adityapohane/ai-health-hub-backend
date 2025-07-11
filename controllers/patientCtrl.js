@@ -42,14 +42,14 @@ const addPatient = async (req, res) => {
     } = req.body;
     let password = `${firstName}@hub`;
 
-      const [rows] = await connection.execute(
-    'SELECT 1 FROM users WHERE username = ? LIMIT 1',
-    [email]
-  );
-  if (rows.length > 0) {
+    const [rows] = await connection.execute(
+      'SELECT 1 FROM users WHERE username = ? LIMIT 1',
+      [email]
+    );
+    if (rows.length > 0) {
 
-    return res.status(401).send({ success: false, message: 'email already exists' });
-  }
+      return res.status(401).send({ success: false, message: 'email already exists' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const insertQuery =
@@ -93,7 +93,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
       city,
       state,
       country,
-      zipCode, 
+      zipCode,
       JSON.stringify(patientService)
     ];
 
@@ -116,15 +116,15 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
   (patient_id, height, weight, bmi, blood_pressure, heart_rate, temperature) 
   VALUES (?, ?, ?, ?, ?, ?, ?)
 `;
-await connection.query(vitalsSql, [
-  insertedId,
-  height || 0,
-  weight || 0,
-  bmi || 0,
-  bloodPressure || '0/0',
-  heartRate || 0,
-  temperature || 0,
-]);
+    await connection.query(vitalsSql, [
+      insertedId,
+      height || 0,
+      weight || 0,
+      bmi || 0,
+      bloodPressure || '0/0',
+      heartRate || 0,
+      temperature || 0,
+    ]);
 
 
     const sql3 = `INSERT INTO patient_insurances (
@@ -229,7 +229,7 @@ await connection.query(vitalsSql, [
       `INSERT INTO cpt_billing (patient_id, cpt_code_id) VALUES (?, ?);`,
       [insertedId, 4]
     );
- 
+
     return res.status(200).json({
       success: true,
       message: "User registered successfully",
@@ -487,7 +487,7 @@ const editPatientDataById = async (req, res) => {
     await connection.query(`UPDATE users SET username = ? WHERE user_id = ?`, [
       email,
       patientId,
-    ]); 
+    ]);
 
 
 
@@ -626,7 +626,7 @@ const editPatientDataById = async (req, res) => {
       } else {
         const [result] = await connection.query(
           `INSERT INTO notes (note, patient_id, created_by) VALUES (?, ?, ?)`,
-          [note.note, patientId,  note.created_by || null]
+          [note.note, patientId, note.created_by || null]
         );
         console.log("Inserted new note:", result);
       }
@@ -656,6 +656,7 @@ const getAllPatients = async (req, res) => {
     const offset = (page - 1) * limit;
     const { roleid, user_id: providerid } = req.user;
     const { searchterm } = req.headers;
+
     const allowedOrderBy = [
       "firstname",
       "lastname",
@@ -1549,10 +1550,10 @@ const addPatientVitals = async (req, res) => {
 };
 const fetchDataByPatientId = async (req, res) => {
   try {
-    const { patientId,date } = {...req.query,...req.params,...req.body};``
-    const {user_id} = req.user;
+    const { patientId, date } = { ...req.query, ...req.params, ...req.body };
+    const { user_id } = req.user;
     const targetDate = date ? moment(date) : moment();
-const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
+    const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
 
     // console.log(patientId)
     const [profileRows] = await connection.query(
@@ -1611,9 +1612,9 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
 
 
 
-    
-      const [allergies] = await connection.query(
-        `SELECT
+
+    const [allergies] = await connection.query(
+      `SELECT
             CASE category
               WHEN 1 THEN 'food'
               WHEN 2 THEN 'medication'
@@ -1628,10 +1629,10 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
           FROM allergies
           WHERE patient_id = ?
             AND created BETWEEN ? AND ?`,
-        [patientId, startOfMonth, endOfMonth]
-      );
-    
-  
+      [patientId, startOfMonth, endOfMonth]
+    );
+
+
 
     // Get medications
     const [currentMedications] = await connection.query(
@@ -1672,7 +1673,7 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
          AND created BETWEEN ? AND ?`,
       [patientId, startOfMonth, endOfMonth]
     );
-   // #production
+    // #production
     const [minutes] = await connection.query(
       `
       SELECT
@@ -1733,7 +1734,7 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
         allergies,
         currentMedications,
         diagnosis,
-        notes:[...notes,...billingNotes],
+        notes: [...notes, ...billingNotes],
         tasks,
         vitals,
         createdBy: notes?.[0]?.created_by || null,
@@ -1741,7 +1742,7 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
         patientId,
         total_minutes: minutesObj
       };
-      console.log(startOfMonth,endOfMonth)
+      console.log(startOfMonth, endOfMonth)
       return res.status(200).json({
         success: true,
         message: "Patient data fetched successfully",
@@ -1763,11 +1764,11 @@ const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
 };
 const fetchDataByPatientIdForccm = async (req, res) => {
   try {
-    const { patientId,date } = {...req.query,...req.params,...req.body};
-    const {user_id} = req.user ;
+    const { patientId, date } = { ...req.query, ...req.params, ...req.body };
+    const { user_id } = req.user;
     const targetDate = date ? moment(date) : moment();
     const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
-    
+
     const [profileRows] = await connection.query(
       `SELECT 
     up.firstname,
@@ -1918,7 +1919,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
         vitals,
         tasks,
       };
-      console.log(startOfMonth,endOfMonth)
+      console.log(startOfMonth, endOfMonth)
       return res.status(200).json({
         success: true,
         message: "Patient data fetched successfully",
@@ -1946,11 +1947,11 @@ const getMonthRange = (targetDate) => {
 
 function calculateBilledMinutes(totalMinutes) {
   const billed = Math.floor(totalMinutes / 20) * 20;
-  const unbilled = totalMinutes - billed ;
+  const unbilled = totalMinutes - billed;
   return {
-      total: totalMinutes ? totalMinutes : 0,
-      billed: billed ? billed : 0,
-      unbilled: unbilled ? unbilled : 0
+    total: totalMinutes ? totalMinutes : 0,
+    billed: billed ? billed : 0,
+    unbilled: unbilled ? unbilled : 0
   };
 }
 

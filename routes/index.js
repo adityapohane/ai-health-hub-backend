@@ -30,7 +30,7 @@ router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
 router.use('/patient', verifyToken, tasksRoutes);
 router.use('/work-flow', verifyToken, workFlowRoutes);
-router.use('/mio',  mioRoutes);
+router.use('/mio', mioRoutes);
 
 
 router.get('/health', (req, res) => {
