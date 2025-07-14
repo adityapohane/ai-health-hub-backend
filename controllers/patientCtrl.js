@@ -888,24 +888,30 @@ const addPatientTask = async (req, res) => {
     duration,
     frequency,
     frequencyType,
-    status
+    status,
+    program_type,
+    cpt_code,
+    billing_minutes
   } = { ...req.body, ...req.query };
   try {
-    const sql = `
-      INSERT INTO tasks (
-        task_title,
-        created_by,
-        frequency,
-        patient_id,
-        status,
-        task_description,
-        priority,
-        due_date,
-        type,
-        duration,
-        frequency_type  
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+ const sql = `
+  INSERT INTO tasks (
+    task_title,
+    created_by,
+    frequency,
+    patient_id,
+    status,
+    task_description,
+    priority,
+    due_date,
+    type,
+    duration,
+    frequency_type,
+    program_type,
+    cpt_code,
+    billing_minutes
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
     const values = [
       title,
@@ -918,7 +924,10 @@ const addPatientTask = async (req, res) => {
       dueDate,
       type,
       duration,
-      frequencyType
+      frequencyType,
+      program_type ? program_type : null,
+      cpt_code ? program_type : null,
+      billing_minutes ? program_type : null 
     ];
 
     const [result] = await connection.query(sql, values);
