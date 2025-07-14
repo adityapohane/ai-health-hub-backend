@@ -910,7 +910,7 @@ const addPatientTask = async (req, res) => {
     const values = [
       title,
       user_id,
-      frequency,
+      frequency ? frequency : "NA",
       patientId,
       status,
       description,
