@@ -1372,8 +1372,8 @@ const addPatientMedication = async (req, res) => {
 
   // Basic validation
   if (
-    !patientId || !name || !dosage || !frequency ||
-    !prescribedBy || !startDate || !endDate || !status
+    !patientId || !name || !dosage || !frequency
+    || !startDate || !endDate || !status
   ) {
     return res.status(400).json({ success: false, message: 'All fields are required' });
   }
@@ -1821,7 +1821,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     );
     const user = userRows[0];
     //#production
-        // Get medications
+    // Get medications
     const [currentMedications] = await connection.query(
       `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id
        FROM patient_medication
@@ -1904,7 +1904,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
         lastVisit: profile.last_visit,
         emergencyContact: profile.emergency_contact,
         patientService: profile.service_type,
-        notes: [...notes,...billingNotes],       
+        notes: [...notes, ...billingNotes],
         createdBy: notes?.[0]?.created_by || null,
         created: profile.created,
         patientId,
