@@ -14,6 +14,7 @@ const awsRoute = require('./awsUpload');
 const tasksRoutes = require('./tasksRoutes');
 const workFlowRoutes = require('./workFlowRoutes');
 const mioRoutes = require('./mioConnectProxyRoutes');
+const locationRoute = require('./location');
 
 
 
@@ -28,6 +29,7 @@ router.use('/patient', verifyToken, patientRoutes);
 router.use('/settings', verifyToken, settingsRoutes);
 router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
+router.use('/location', verifyToken, locationRoute);
 router.use('/patient', verifyToken, tasksRoutes);
 router.use('/work-flow', verifyToken, workFlowRoutes);
 router.use('/mio', mioRoutes);
