@@ -7,7 +7,7 @@ exports.createWorkflow = async (req, res) => {
 
   try {
     await db.query(
-      `INSERT INTO work_flows_template (id, name, description, category, estimated_duration, provider_id, created_at)
+      `INSERT INTO workflow_templates (id, name, description, category, estimated_duration, provider_id, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [id, name, description, category, estimated_duration, provider_id, created_at]
     );
@@ -40,7 +40,7 @@ exports.getByProvider = async (req, res) => {
   const { providerId } = req.params;
   try {
     const [templates] = await db.query(
-      `SELECT * FROM work_flows_template WHERE provider_id = ?`,
+      `SELECT * FROM workflow_templates WHERE provider_id = ?`,
       [providerId]
     );
 
@@ -74,7 +74,7 @@ exports.updateWorkflow = async (req, res) => {
 
   try {
     await db.query(
-      `UPDATE work_flows_template SET name=?, description=?, category=?, estimated_duration=?, provider_id=? WHERE id=?`,
+      `UPDATE workflow_templates SET name=?, description=?, category=?, estimated_duration=?, provider_id=? WHERE id=?`,
       [name, description, category, estimated_duration, provider_id, id]
     );
 
@@ -107,7 +107,7 @@ exports.deleteWorkflow = async (req, res) => {
   const { id } = req.params;
 
   try {
-    await db.query(`DELETE FROM work_flows_template WHERE id = ?`, [id]); // Cascade deletes tasks & conditions
+    await db.query(`DELETE FROM workflow_templates WHERE id = ?`, [id]); // Cascade deletes tasks & conditions
 
     res.json({ success: true, message: 'Workflow deleted' });
   } catch (err) {
