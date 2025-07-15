@@ -19,6 +19,31 @@ const documentTypeCtrl = async (req, res) => {
         });
     }
 };
+const getDocumentsByPatientIdCtrl = async (req, res) => {
+  const { patientId } = req.query;
+  if(!patientId){
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields",
+      error: "Please provide patient_id",
+    });
+  }
+    try {
+        const sql = `SELECT * FROM patient_documents WHERE patient_id = ?`
+        const [types] = await connection.query(sql, [patientId]);
+        return res.status(200).json({
+            success: true,
+            message: "Document fetched successfully",
+            types
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Document cannot be uploaded. Please try again.",
+        });
+    }
+};
 
 const documentUploadCtrl = async (req, res) => {
     try {
@@ -109,5 +134,6 @@ const documentUploadCtrl = async (req, res) => {
 
 module.exports = {
     documentTypeCtrl,
-    documentUploadCtrl
+    documentUploadCtrl,
+    getDocumentsByPatientIdCtrl
 }
