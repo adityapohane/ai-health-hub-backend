@@ -16,6 +16,7 @@ const workFlowRoutes = require('./workFlowRoutes');
 const mioRoutes = require('./mioConnectProxyRoutes');
 const locationRoute = require('./location');
 const twilioRoutes = require("./twilioRoutes");
+const documentRoutes = require("./documentRoute");
 
 
 
@@ -35,6 +36,7 @@ router.use('/patient', verifyToken, tasksRoutes);
 router.use('/work-flow', verifyToken, workFlowRoutes);
 router.use('/mio', mioRoutes);
 router.use("/twilio",verifyToken, twilioRoutes);
+router.use("/documents", documentRoutes);
 
 router.get('/health',verifyToken, (req, res) => {
     res.json({
