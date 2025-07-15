@@ -36,7 +36,7 @@ router.use('/patient', verifyToken, tasksRoutes);
 router.use('/work-flow', verifyToken, workFlowRoutes);
 router.use('/mio', mioRoutes);
 router.use("/twilio",verifyToken, twilioRoutes);
-router.use("/documents", documentRoutes);
+router.use("/documents",verifyToken, documentRoutes);
 
 router.get('/health',verifyToken, (req, res) => {
     res.json({
