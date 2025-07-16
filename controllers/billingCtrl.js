@@ -16,11 +16,11 @@ const getAllPatients = async (req, res) => {
         page = parseInt(page);
         limit = parseInt(limit);
         const offset = (page - 1) * limit;
-        const { roleid, user_id } = req.user;
+        const { roleid, user_id } = req?.user;
        
 
                     const sql = `SELECT 
-                        cb.id as billing_id,
+                        GROUP_CONCAT(DISTINCT cb.id ORDER BY cb.id SEPARATOR ', ') AS billing_ids,
                         cb.patient_id,
                         up.phone,
                         up.dob,
@@ -95,6 +95,40 @@ const getAllPatients = async (req, res) => {
         });
     }
 };
+
+const updateBillingStatus = async (req, res) => {
+    try {
+      const { billing_ids, status } = req.body;
+  
+      if (!billing_ids || typeof billing_ids !== 'string') {
+        return res.status(400).json({ error: 'billing_ids must be a comma-separated string' });
+      }
+  
+      const idsArray = billing_ids
+        .split(',')
+        .map(id => parseInt(id.trim()))
+        .filter(Boolean);
+  
+      if (idsArray.length === 0) {
+        return res.status(400).json({ error: 'No valid billing IDs provided.' });
+      }
+  
+      const placeholders = idsArray.map(() => '?').join(', ');
+      const updateSql = `UPDATE cpt_billing SET status = ? WHERE id IN (${placeholders})`;
+  
+      await connection.execute(updateSql, [status ? status : 0, ...idsArray]);
+  
+      return res.status(200).json({
+        message: 'Billing status updated successfully',
+        updated_ids: idsArray,
+        new_status: status || 0
+      });
+    } catch (err) {
+      console.error('Error updating billing statuses:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+};
 module.exports = {
-    getAllPatients
+    getAllPatients,
+    updateBillingStatus
 }
