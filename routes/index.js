@@ -17,6 +17,7 @@ const mioRoutes = require('./mioConnectProxyRoutes');
 const locationRoute = require('./location');
 const twilioRoutes = require("./twilioRoutes");
 const documentRoutes = require("./documentRoute");
+const billingRoutes = require("./billingRoutes");
 
 
 
@@ -37,7 +38,7 @@ router.use('/work-flow', verifyToken, workFlowRoutes);
 router.use('/mio', mioRoutes);
 router.use("/twilio",verifyToken, twilioRoutes);
 router.use("/documents",verifyToken, documentRoutes);
-
+router.use("/billing", billingRoutes);
 router.get('/health',verifyToken, (req, res) => {
     res.json({
         status: 'healthy',
