@@ -16,8 +16,8 @@ const getAllPatients = async (req, res) => {
         page = parseInt(page);
         limit = parseInt(limit);
         const offset = (page - 1) * limit;
-        // const { roleid, user_id } = req.user;
-        const user_id = 30450
+        const { roleid, user_id } = req.user;
+       
 
                     const sql = `SELECT 
                         cb.id as billing_id,
