@@ -75,6 +75,19 @@ const getAllPatients = async (req, res) => {
           [patient.patient_id, patient.patient_id]
         );
         patient.total_minutes = rows[0].total_minutes;
+        const idsArray = String(patient.billing_ids).split(',').map(id => id.trim());
+        const sql2 = `SELECT cpt_code_id,cc.code,code_units,created,cc.price from cpt_billing LEFT JOIN cpt_codes cc ON cc.id = cpt_code_id WHERE cpt_billing.id IN (${idsArray.join(",")})`
+        const [data] = await connection.query(sql2);
+        patient.cpt_data = data;
+       let total = 0;
+     for (const item of data) {
+        const price = parseFloat(item.price);
+        const units = item.code_units && item.code_units > 0 ? item.code_units : 1;
+        total += price * units;
+      }
+
+      total = parseFloat(total.toFixed(2));
+      patient.totalPrice = total;
         }
         return res.status(200).json({
             success: true,
@@ -114,9 +127,18 @@ const updateBillingStatus = async (req, res) => {
       }
   
       const placeholders = idsArray.map(() => '?').join(', ');
-      const updateSql = `UPDATE cpt_billing SET status = ? WHERE id IN (${placeholders})`;
+      let sql = `UPDATE cpt_billing SET status = ?`;
+      const values = [status];
+
+      if (status == 2) {
+        sql += `, billed_date = ?`;
+        values.push(new Date()); // current timestamp
+        }
+
+      sql += ` WHERE id IN (${placeholders})`;
+      values.push(...idsArray);
   
-      await connection.execute(updateSql, [status ? status : 0, ...idsArray]);
+      await connection.execute(sql, values);
   
       return res.status(200).json({
         message: 'Billing status updated successfully',
