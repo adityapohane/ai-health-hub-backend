@@ -32,7 +32,8 @@ const getAllPatients = async (req, res) => {
                         CONCAT(up.firstname, " ", up.lastname) AS patient_name,
                         CONCAT(up2.firstname, " ", up2.lastname) AS provider_name,
                         cb.status AS billing_status,
-                        um.fk_physician_id
+                        um.fk_physician_id,
+                        up.service_type
                     FROM cpt_billing cb
                     LEFT JOIN cpt_codes cc ON cc.id = cb.cpt_code_id
                     LEFT JOIN users_mappings um ON um.user_id = cb.patient_id
