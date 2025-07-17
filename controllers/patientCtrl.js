@@ -1460,32 +1460,19 @@ const getPatientTimings = async (req, res) => {
   try {
     const [rows] = await connection.query(
       `
-      SELECT
-        CEIL((
-          (SELECT IFNULL(SUM(duration), 0)
-           FROM patient_billing_notes
-           WHERE patient_id = ? AND timed_by = ? 
-             AND created BETWEEN '${startDate}' AND '${endDate}') +
-    
-          (SELECT IFNULL(SUM(duration), 0)
-           FROM tasks
-           WHERE patient_id = ? AND created_by = ? 
-             AND created BETWEEN '${startDate}' AND '${endDate}')
-        ) / 60) AS total_minutes
+       SELECT (
+    SELECT IFNULL(SUM(duration), 0)
+    FROM (
+        SELECT DISTINCT created, duration
+        FROM notes
+        WHERE patient_id = ?
+        AND created BETWEEN '${startDate}' AND '${endDate}'
+    ) AS unique_notes
+) AS total_minutes;
       `,
-      [patientId, user_id, patientId, user_id]
+      [patientId]
     );
 
-    const [billingNotes] = await connection.query(
-      `
-      SELECT duration, note as title, category, created, 'note' as billing 
-      FROM patient_billing_notes 
-      WHERE patient_id = ? AND timed_by = ? 
-        AND created BETWEEN '${startDate}' AND '${endDate}'
-      ORDER BY created DESC
-      `,
-      [patientId, user_id]
-    );
 
     const [tasks] = await connection.query(
       `
@@ -1502,8 +1489,8 @@ const getPatientTimings = async (req, res) => {
       success: true,
       message: 'Patient timings fetched successfully',
       totalMinutes: rows.length ? rows[0].total_minutes : 0,
-      totalAmount: 89.9,
-      entries: [...billingNotes, ...tasks],
+      totalAmount: 0,
+      entries: [ ...tasks],
       filterRange: { startDate, endDate }
     });
   } catch (error) {
@@ -1684,7 +1671,7 @@ const fetchDataByPatientId = async (req, res) => {
     );
 
     const [notes] = await connection.query(
-      `SELECT note, created, created_by, note_id
+      `SELECT note, created, created_by, note_id,duration
        FROM notes
        WHERE patient_id = ?
          AND created BETWEEN ? AND ?`,
@@ -1707,29 +1694,20 @@ const fetchDataByPatientId = async (req, res) => {
     // #production
     const [minutes] = await connection.query(
       `
-      SELECT
-        CEIL((
-          (SELECT IFNULL(SUM(duration), 0)
-           FROM patient_billing_notes
-           WHERE patient_id = ? AND timed_by = ? 
-             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}') +
-    
-          (SELECT IFNULL(SUM(duration), 0)
-           FROM tasks
-           WHERE patient_id = ? AND created_by = ? 
-             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}')
-        ) / 60) AS total_minutes
+      SELECT (
+    SELECT IFNULL(SUM(duration), 0)
+    FROM (
+        SELECT DISTINCT created, duration
+        FROM notes
+        WHERE patient_id = ?
+        AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}'
+    ) AS unique_notes
+) AS total_minutes;
       `,
-      [patientId, user_id, patientId, user_id]
-    );
-    const [billingNotes] = await connection.query(
-      `SELECT note, created, (duration/60) as duration
-       FROM patient_billing_notes
-       WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
-      [patientId, startOfMonth, endOfMonth]
+      [patientId]
     );
     let minutesObj = calculateBilledMinutes(minutes[0]?.total_minutes)
+    console.log(minutes)
     // Compose full response
     if (profile) {
       const response = {
@@ -1765,7 +1743,7 @@ const fetchDataByPatientId = async (req, res) => {
         allergies,
         currentMedications,
         diagnosis,
-        notes: [...notes, ...billingNotes],
+        notes: [...notes],
         tasks,
         vitals,
         createdBy: notes?.[0]?.created_by || null,
@@ -1871,7 +1849,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     );
 
     const [notes] = await connection.query(
-      `SELECT note, created, created_by, note_id
+      `SELECT note, created,duration, created_by, note_id
        FROM notes
        WHERE patient_id = ?
          AND created BETWEEN ? AND ?`,
@@ -1891,29 +1869,19 @@ const fetchDataByPatientIdForccm = async (req, res) => {
          AND created BETWEEN ? AND ?`,
       [patientId, startOfMonth, endOfMonth]
     );
-    const [billingNotes] = await connection.query(
-      `SELECT note, created, (duration/60) as duration
-       FROM patient_billing_notes
-       WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
-      [patientId, startOfMonth, endOfMonth]
-    );
     const [minutes] = await connection.query(
       `
-      SELECT
-        CEIL((
-          (SELECT IFNULL(SUM(duration), 0)
-           FROM patient_billing_notes
-           WHERE patient_id = ? AND timed_by = ? 
-             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}') +
-    
-          (SELECT IFNULL(SUM(duration), 0)
-           FROM tasks
-           WHERE patient_id = ? AND created_by = ? 
-             AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}')
-        ) / 60) AS total_minutes
+      SELECT (
+    SELECT IFNULL(SUM(duration), 0)
+    FROM (
+        SELECT DISTINCT created, duration
+        FROM notes
+        WHERE patient_id = ?
+        AND created BETWEEN '${startOfMonth}' AND '${endOfMonth}'
+    ) AS unique_notes
+) AS total_minutes;
       `,
-      [patientId, profile.fk_physician_id, patientId, profile.fk_physician_id]
+      [patientId]
     );
     let minutesObj = calculateBilledMinutes(minutes[0]?.total_minutes)
     if (profile) {
@@ -1935,7 +1903,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
         lastVisit: profile.last_visit,
         emergencyContact: profile.emergency_contact,
         patientService: profile.service_type,
-        notes: [...notes, ...billingNotes],
+        notes: [...notes],
         createdBy: notes?.[0]?.created_by || null,
         created: profile.created,
         patientId,
