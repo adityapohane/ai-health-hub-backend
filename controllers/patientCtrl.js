@@ -245,8 +245,21 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
 // Get all patients with pagination
 const getPatientDataById = async (req, res) => {
   try {
-    const { patientId } = req.query;
-    // console.log(patientId)
+    // const { patientId } = req.query;
+    console.log(req.user)
+    const { roleid, user_id } = req.user;
+     let patientId;
+
+    if (roleid == 6) {
+      patientId = req.query.patientId;
+      if (!patientId) {
+        return res.status(400).json({ message: 'patientId is required for provider' });
+      }
+    } else if (roleid == 7) {
+      patientId = user_id;
+    } else {
+      return res.status(403).json({ message: 'Unauthorized role' });
+    }
     // Get user profile
     const [profileRows] = await connection.query(
       `SELECT 

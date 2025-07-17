@@ -387,7 +387,6 @@ const checkMinutesForPatient = async () => {
         AND t1.cpt_code_id = t2.cpt_code_id
         AND IFNULL(t1.code_units, 0) = IFNULL(t2.code_units, 0)
         AND DATE(t1.created) = DATE(t2.created)
-      WHERE t1.patient_id = ?
     `;
   const [res] = await connection.execute(DeleteQ, [patient_id]);
     }
