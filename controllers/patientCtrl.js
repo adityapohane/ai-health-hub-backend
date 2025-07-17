@@ -632,14 +632,14 @@ const editPatientDataById = async (req, res) => {
 
       if (note.note_id) {
         const [result] = await connection.query(
-          `UPDATE notes SET note = ? WHERE note_id = ? AND patient_id = ?`,
-          [note.note, note.note_id, patientId]
+          `UPDATE notes SET note = ?,type = ? WHERE note_id = ? AND patient_id = ?`,
+          [note.note,note.type, note.note_id, patientId]
         );
         console.log("Updated note ID:", note.note_id, result);
       } else {
         const [result] = await connection.query(
-          `INSERT INTO notes (note, patient_id, created_by) VALUES (?, ?, ?)`,
-          [note.note, patientId, note.created_by || null]
+          `INSERT INTO notes (note,type, patient_id, created_by) VALUES (?, ?, ?)`,
+          [note.note,note.type, patientId, note.created_by || null]
         );
         console.log("Inserted new note:", result);
       }
@@ -1230,7 +1230,7 @@ const getPatientDiagnosis = async (req, res) => {
   }
 };
 const addPatientNotes = async (req, res) => {
-  const { note, type, patientId } = { ...req.body, ...req.query };
+  const { note, type,duration, patientId } = { ...req.body, ...req.query };
   const { user_id } = req.user;
   try {
 
@@ -1240,9 +1240,10 @@ const addPatientNotes = async (req, res) => {
     patient_id,
     note,
     type,
+    duration,
     created_by
   ) VALUES(?, ?, ?, ?);`,
-      [patientId, note, type, user_id]
+      [patientId, note, type,duration, user_id]
     );
 
     res.status(200).json({
