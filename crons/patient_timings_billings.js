@@ -19,6 +19,7 @@ const isCptCodeBilled = async (patient_id, code_id, units = null) => {
   const [rows] = await connection.execute(sql, params);
   return rows.length > 0;
 };
+
 const checkMinutesForPatient = async () => {
   try {
 
@@ -34,25 +35,25 @@ const checkMinutesForPatient = async () => {
     for (const patient of rpmPatients) {
       const { patient_id, service_type } = patient;
       console.log("Billing for service type", service_type, "for patient", patient_id)
-
-      if (service_type?.includes(1) && !service_type?.includes(2) && !service_type?.includes(3)) { //rpm
-        const [rows] = await connection.query(
+         const [rows] = await connection.query(
           `
-          SELECT CEIL((
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM patient_billing_notes
-             WHERE patient_id = ?
-               AND created BETWEEN ? AND ?) +
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM tasks
-             WHERE patient_id = ? 
-               AND created BETWEEN ? AND ?)
-          ) / 60) AS total_minutes
+          SELECT (
+    SELECT IFNULL(SUM(duration), 0)
+    FROM (
+        SELECT DISTINCT created, duration
+        FROM notes
+        WHERE patient_id = ?
+        AND created BETWEEN '${startDate}' AND '${endDate}'
+    ) AS unique_notes
+) AS total_minutes;
           `,
-          [patient_id, startDate, endDate, patient_id, startDate, endDate]
+          [patient_id]
         );
 
         const total_minutes = rows[0].total_minutes;
+
+      if (service_type?.includes(1) && !service_type?.includes(2) && !service_type?.includes(3)) { //rpm
+     
         console.log("total_minutes", total_minutes, patient_id);
         if (total_minutes >= 20 && total_minutes < 40) {
           // 99457 only
@@ -88,33 +89,27 @@ const checkMinutesForPatient = async () => {
               });
           }
           if (!await isCptCodeBilled(patient_id, 7, 2)) {
+          const update7 = await connection.execute(
+          `UPDATE cpt_billing 
+          SET code_units = ?
+          WHERE patient_id = ? 
+          AND cpt_code_id = 7
+          AND DATE(created) BETWEEN ? AND ?`,
+          [2, patient_id, startDate, endDate]
+        );
+
+    // If no record exists for this month, insert a new one
+    if (update7[0].affectedRows === 0) {
             queries.push({
               sql: `INSERT INTO cpt_billing (patient_id, cpt_code_id, code_units) VALUES (?, ?, ?)`,
               params: [patient_id, 7, 2]
             });
-          }
+          }}
         }
         for (const query of queries) {
           await connection.execute(query.sql, query.params);
         }
       } else if (service_type?.includes(1) && service_type?.includes(2) && !service_type?.includes(3)) { //rpm+ccm
-        const [rows] = await connection.query(
-          `
-          SELECT CEIL((
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM patient_billing_notes
-             WHERE patient_id = ?
-               AND created BETWEEN ? AND ?) +
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM tasks
-             WHERE patient_id = ? 
-               AND created BETWEEN ? AND ?)
-          ) / 60) AS total_minutes
-          `,
-          [patient_id, startDate, endDate, patient_id, startDate, endDate]
-        );
-
-        const total_minutes = rows[0].total_minutes;
         console.log("total_minutes", total_minutes, patient_id);
         if (total_minutes >= 20 && total_minutes < 40) {
           // 99457 only
@@ -168,12 +163,23 @@ const checkMinutesForPatient = async () => {
             });
           }
           if (!await isCptCodeBilled(patient_id, 7, 2)) {
+               const update7 = await connection.execute(
+          `UPDATE cpt_billing 
+          SET code_units = ?
+          WHERE patient_id = ? 
+          AND cpt_code_id = 7
+          AND DATE(created) BETWEEN ? AND ?`,
+          [2, patient_id, startDate, endDate]
+        );
+
+    // If no record exists for this month, insert a new one
+          if (update7[0].affectedRows === 0) {
             queries.push({
               sql: `INSERT INTO cpt_billing (patient_id, cpt_code_id, code_units) VALUES (?, ?, ?)`,
               params: [patient_id, 7, 2]
             }
             );
-          }
+          }}
           if (!await isCptCodeBilled(patient_id, 10)) {
             queries.push({
               sql: `INSERT INTO cpt_billing (patient_id, cpt_code_id) VALUES (?, ?)`,
@@ -181,34 +187,29 @@ const checkMinutesForPatient = async () => {
             });
           }
           if (!await isCptCodeBilled(patient_id, 3, 2)) {
+               const update7 = await connection.execute(
+          `UPDATE cpt_billing 
+          SET code_units = ?
+          WHERE patient_id = ? 
+          AND cpt_code_id = 3
+          AND DATE(created) BETWEEN ? AND ?`,
+          [2, patient_id, startDate, endDate]
+        );
+
+    // If no record exists for this month, insert a new one
+    if (update7[0].affectedRows === 0) {
             queries.push({
               sql: `INSERT INTO cpt_billing (patient_id, cpt_code_id, code_units) VALUES (?, ?, ?)`,
               params: [patient_id, 3, 2]
             });
-          }
+          }}
         }
         for (const query of queries) {
           await connection.execute(query.sql, query.params);
         }
 
       } else if (service_type?.includes(1) && !service_type?.includes(2) && service_type?.includes(3)) { //rpm+pcm
-        const [rows] = await connection.query(
-          `
-          SELECT CEIL((
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM patient_billing_notes
-             WHERE patient_id = ?
-               AND created BETWEEN ? AND ?) +
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM tasks
-             WHERE patient_id = ? 
-               AND created BETWEEN ? AND ?)
-          ) / 60) AS total_minutes
-          `,
-          [patient_id, startDate, endDate, patient_id, startDate, endDate]
-        );
 
-        const total_minutes = rows[0].total_minutes;
         console.log("total_minutes", total_minutes, patient_id);
         if (total_minutes >= 30 && total_minutes < 60) {
           if (!await isCptCodeBilled(patient_id, 1)) {
@@ -252,11 +253,22 @@ const checkMinutesForPatient = async () => {
             });
           }
           if (!await isCptCodeBilled(patient_id, 7, 2)) {
+          const update7 = await connection.execute(
+          `UPDATE cpt_billing 
+          SET code_units = ?
+          WHERE patient_id = ? 
+          AND cpt_code_id = 7
+          AND DATE(created) BETWEEN ? AND ?`,
+          [2, patient_id, startDate, endDate]
+        );
+
+    // If no record exists for this month, insert a new one
+    if (update7[0].affectedRows === 0) {
             queries.push({
               sql: `INSERT INTO cpt_billing (patient_id, cpt_code_id, code_units) VALUES (?, ?, ?)`,
               params: [patient_id, 7, 2]
             });
-          };
+          }};
           if (!await isCptCodeBilled(patient_id, 1)) {
             queries.push({
               sql: `INSERT INTO cpt_billing (patient_id, cpt_code_id) VALUES (?, ?)`,
@@ -275,23 +287,6 @@ const checkMinutesForPatient = async () => {
         }
 
       } else if (!service_type?.includes(1) && service_type?.includes(2) && !service_type?.includes(3)) { //ccm
-        const [rows] = await connection.query(
-          `
-          SELECT CEIL((
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM patient_billing_notes
-             WHERE patient_id = ?
-               AND created BETWEEN ? AND ?) +
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM tasks
-             WHERE patient_id = ? 
-               AND created BETWEEN ? AND ?)
-          ) / 60) AS total_minutes
-          `,
-          [patient_id, startDate, endDate, patient_id, startDate, endDate]
-        );
-
-        const total_minutes = rows[0].total_minutes;
         console.log("total_minutes", total_minutes, patient_id);
         if (total_minutes >= 20 && total_minutes < 40) {
           if (!await isCptCodeBilled(patient_id, 10)) {
@@ -322,33 +317,27 @@ const checkMinutesForPatient = async () => {
               })
           }
           if (!await isCptCodeBilled(patient_id, 3, 2)) {
+          const update7 = await connection.execute(
+          `UPDATE cpt_billing 
+          SET code_units = ?
+          WHERE patient_id = ? 
+          AND cpt_code_id = 3
+          AND DATE(created) BETWEEN ? AND ?`,
+          [2, patient_id, startDate, endDate]
+        );
+
+    // If no record exists for this month, insert a new one
+    if (update7[0].affectedRows === 0) {
             queries.push({
               sql: `INSERT INTO cpt_billing (patient_id, cpt_code_id, code_units) VALUES (?, ?, ?)`,
               params: [patient_id, 3, 2]
             });
-          }
+          }}
         }
         for (const query of queries) {
           await connection.execute(query.sql, query.params);
         }
       } else if (!service_type?.includes(1) && !service_type?.includes(2) && service_type?.includes(3)) { //pcm
-        const [rows] = await connection.query(
-          `
-          SELECT CEIL((
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM patient_billing_notes
-             WHERE patient_id = ?
-               AND created BETWEEN ? AND ?) +
-            (SELECT IFNULL(SUM(duration), 0)
-             FROM tasks
-             WHERE patient_id = ? 
-               AND created BETWEEN ? AND ?)
-          ) / 60) AS total_minutes
-          `,
-          [patient_id, startDate, endDate, patient_id, startDate, endDate]
-        );
-
-        const total_minutes = rows[0].total_minutes;
         console.log("total_minutes", total_minutes, patient_id);
         if (total_minutes >= 30 && total_minutes < 60) {
           if (!await isCptCodeBilled(patient_id, 1)) {
@@ -395,5 +384,6 @@ const checkMinutesForPatient = async () => {
     console.error('Cron job failed:', err.message);
   }
 };
-// checkMinutesForPatient();
-cron.schedule('*/5 * * * *',checkMinutesForPatient);
+
+checkMinutesForPatient();
+// cron.schedule('*/5 * * * *',checkMinutesForPatient);

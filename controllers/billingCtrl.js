@@ -51,44 +51,41 @@ const getAllPatients = async (req, res) => {
         for (const patient of patients) {
         const [rows] = await connection.query(
           `
-          SELECT
-                CEIL((
-                    (
-                    SELECT IFNULL(SUM(duration), 0)
-                    FROM (
-                        SELECT DISTINCT patient_id, timed_by, duration, DATE(created)
-                        FROM patient_billing_notes
-                        WHERE patient_id = ? 
-                        AND created BETWEEN '${startDate}' AND '${endDate}'
-                    ) AS unique_billing
-                    ) +
-                    (
-                    SELECT IFNULL(SUM(duration), 0)
-                    FROM (
-                        SELECT DISTINCT patient_id, created_by, duration, DATE(created)
-                        FROM tasks
-                        WHERE patient_id = ?
-                        AND created BETWEEN '${startDate}' AND '${endDate}'
-                    ) AS unique_tasks
-                    )
-                ) / 60) AS total_minutes
+         SELECT (
+    SELECT IFNULL(SUM(duration), 0)
+    FROM (
+        SELECT DISTINCT created, duration
+        FROM notes
+        WHERE patient_id = ?
+        AND created BETWEEN '${startDate}' AND '${endDate}'
+    ) AS unique_notes
+) AS total_minutes;
           `,
-          [patient.patient_id, patient.patient_id]
+          [patient.patient_id]
         );
         patient.total_minutes = rows[0].total_minutes;
         const idsArray = String(patient.billing_ids).split(',').map(id => id.trim());
         const sql2 = `SELECT cpt_code_id,cc.code,code_units,created,cc.price from cpt_billing LEFT JOIN cpt_codes cc ON cc.id = cpt_code_id WHERE cpt_billing.id IN (${idsArray.join(",")})`
         const [data] = await connection.query(sql2);
         patient.cpt_data = data;
-       let total = 0;
-     for (const item of data) {
-        const price = parseFloat(item.price);
-        const units = item.code_units && item.code_units > 0 ? item.code_units : 1;
-        total += price * units;
-      }
-
+     let total = data.reduce((sum, item) => {
+  const price = parseFloat(item.price);
+  const units = item.code_units && item.code_units > 0 ? item.code_units : 1;
+  // console.log(sum+units*price,price,units)
+  return sum + (price * units);
+}, 0);
       total = parseFloat(total.toFixed(2));
       patient.totalPrice = total;
+
+      // notes for reviewing
+      const [notes] = await connection.query(
+      `SELECT note, created,duration,type, created_by, note_id
+       FROM notes
+       WHERE patient_id = ?
+         AND created BETWEEN ? AND ?`,
+      [patient.patient_id, startDate, endDate]
+    );
+    patient.notes = notes
         }
         return res.status(200).json({
             success: true,
