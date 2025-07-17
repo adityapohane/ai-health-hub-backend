@@ -198,10 +198,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     const sql6 = `INSERT INTO notes (
   patient_id,
   note,
+  duration
   created_by
-) VALUES (?, ?, ?);`;
+) VALUES (?, ?, ?, ?);`;
     notes?.map(async (note) => {
-      const values6 = [insertedId, note.note, user_id];
+      const values6 = [insertedId, note.note, note.duration, user_id];
       const [noteResult] = await connection.query(sql6, values6);
     });
 
@@ -357,7 +358,7 @@ const getPatientDataById = async (req, res) => {
 
     // Get notes
     const [notes] = await connection.query(
-      `SELECT note, created, created_by ,note_id FROM notes WHERE patient_id = ?`,
+      `SELECT note, created,duration, created_by ,note_id FROM notes WHERE patient_id = ?`,
       [patientId]
     );
     const [tasks] = await connection.query(
@@ -632,14 +633,14 @@ const editPatientDataById = async (req, res) => {
 
       if (note.note_id) {
         const [result] = await connection.query(
-          `UPDATE notes SET note = ?,type = ? WHERE note_id = ? AND patient_id = ?`,
-          [note.note,note.type, note.note_id, patientId]
+          `UPDATE notes SET note = ?,type = ?,duration=? WHERE note_id = ? AND patient_id = ?`,
+          [note.note,note.type,note.duration, note.note_id, patientId]
         );
         console.log("Updated note ID:", note.note_id, result);
       } else {
         const [result] = await connection.query(
-          `INSERT INTO notes (note,type, patient_id, created_by) VALUES (?, ?, ?)`,
-          [note.note,note.type, patientId, note.created_by || null]
+          `INSERT INTO notes (note,type, patient_id,duration, created_by) VALUES (?, ?, ?,?)`,
+          [note.note,note.type, patientId,note.duration, note.created_by || null]
         );
         console.log("Inserted new note:", result);
       }
@@ -1242,7 +1243,7 @@ const addPatientNotes = async (req, res) => {
     type,
     duration,
     created_by
-  ) VALUES(?, ?, ?, ?);`,
+  ) VALUES(?, ?, ?, ?,?);`,
       [patientId, note, type,duration, user_id]
     );
 
