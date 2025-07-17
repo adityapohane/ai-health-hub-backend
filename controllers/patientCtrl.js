@@ -249,7 +249,7 @@ const getPatientDataById = async (req, res) => {
     // const { patientId } = req.query;
     console.log(req.user)
     const { roleid, user_id } = req.user;
-     let patientId;
+    let patientId;
 
     if (roleid == 6) {
       patientId = req.query.patientId;
@@ -634,13 +634,13 @@ const editPatientDataById = async (req, res) => {
       if (note.note_id) {
         const [result] = await connection.query(
           `UPDATE notes SET note = ?,type = ?,duration=? WHERE note_id = ? AND patient_id = ?`,
-          [note.note,note.type,note.duration, note.note_id, patientId]
+          [note.note, note.type, note.duration, note.note_id, patientId]
         );
         console.log("Updated note ID:", note.note_id, result);
       } else {
         const [result] = await connection.query(
           `INSERT INTO notes (note,type, patient_id,duration, created_by) VALUES (?, ?, ?,?)`,
-          [note.note,note.type, patientId,note.duration, note.created_by || null]
+          [note.note, note.type, patientId, note.duration, note.created_by || null]
         );
         console.log("Inserted new note:", result);
       }
@@ -908,7 +908,7 @@ const addPatientTask = async (req, res) => {
     billing_minutes
   } = { ...req.body, ...req.query };
   try {
- const sql = `
+    const sql = `
   INSERT INTO tasks (
     task_title,
     created_by,
@@ -940,8 +940,8 @@ const addPatientTask = async (req, res) => {
       duration,
       frequencyType,
       program_type ? program_type : null,
-      cpt_code ? program_type : null,
-      billing_minutes ? program_type : null 
+      cpt_code ? cpt_code : null,
+      billing_minutes ? billing_minutes : null
     ];
 
     const [result] = await connection.query(sql, values);
@@ -1231,7 +1231,7 @@ const getPatientDiagnosis = async (req, res) => {
   }
 };
 const addPatientNotes = async (req, res) => {
-  const { note, type,duration, patientId } = { ...req.body, ...req.query };
+  const { note, type, duration, patientId } = { ...req.body, ...req.query };
   const { user_id } = req.user;
   try {
 
@@ -1244,7 +1244,7 @@ const addPatientNotes = async (req, res) => {
     duration,
     created_by
   ) VALUES(?, ?, ?, ?,?);`,
-      [patientId, note, type,duration, user_id]
+      [patientId, note, type, duration, user_id]
     );
 
     res.status(200).json({
@@ -1323,6 +1323,8 @@ const addPatientAllergy = async (req, res) => {
     res.status(500).json({ success: false, message: 'DB error', error: error.message });
   }
 }
+
+
 const addPatientInsurance = async (req, res) => {
   const {
     policyNumber,
@@ -1333,12 +1335,13 @@ const addPatientInsurance = async (req, res) => {
     type,
     effectiveDate,
     patientId,
+
   } = { ...req.body, ...req.query };
 
   // Basic validation
   if (
     !policyNumber || !groupNumber || !company ||
-    !plan || !expirationDate || !type || !effectiveDate || !fk_userid
+    !plan || !expirationDate || !type || !effectiveDate
   ) {
     return res.status(400).json({ success: false, message: 'All fields are required' });
   }
@@ -1382,6 +1385,10 @@ const addPatientInsurance = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
   }
 };
+
+
+
+
 const addPatientMedication = async (req, res) => {
   const {
     patientId,
