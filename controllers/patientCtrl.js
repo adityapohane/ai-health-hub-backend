@@ -59,43 +59,33 @@ const addPatient = async (req, res) => {
     const [result] = await connection.query(insertQuery, userValue);
     const insertedId = result.insertId;
 
-    const sql1 = `
+  const sql1 = `
 INSERT INTO user_profiles (
   firstname, middlename, lastname, dob, work_email, phone,
   gender, ethnicity, last_visit, emergency_contact,
-  height, dry_weight, bmi, fk_userid, status, bp, heart_rate, temp,
-  address_line,address_line_2, city, state, country, zip,service_type
+  address_line, address_line_2, city, state, country, zip, service_type
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-  `;
-
-    const values1 = [
-      firstName,
-      middleName,
-      lastName,
-      birthDate,
-      email,
-      phone, // 1–6 ✅
-      gender,
-      ethnicity,
-      lastVisit,
-      emergencyContact, // 7–10 ✅
-      height,
-      weight,
-      bmi, // 11–13 ✅
-      insertedId,
-      status,
-      bloodPressure,
-      heartRate,
-      temperature,
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      country,
-      zipCode,
-      JSON.stringify(patientService)
-    ];
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+`;  
+  const values1 = [
+  firstName,
+  middleName,
+  lastName,
+  birthDate,
+  email,
+  phone, // 1–6
+  gender,
+  ethnicity,
+  lastVisit,
+  emergencyContact, // 7–10
+  addressLine1,
+  addressLine2,
+  city,
+  state,
+  country,
+  zipCode,
+  JSON.stringify(patientService)
+];
 
     const [userResult] = await connection.query(sql1, values1);
 
@@ -359,14 +349,18 @@ const getPatientDataById = async (req, res) => {
 
     // Get notes
     const [notes] = await connection.query(
-      `SELECT note, created,duration, created_by ,note_id FROM notes WHERE patient_id = ? ORDER BY note_id DESC`,
+      `SELECT note, created,duration, created_by,type ,note_id FROM notes WHERE patient_id = ? ORDER BY note_id DESC`,
       [patientId]
     );
     const [tasks] = await connection.query(
       `SELECT * FROM tasks WHERE patient_id = ? ORDER BY id DESC`,
       [patientId]
     );
-
+    const [patientVitals] = await connection.query(
+      `SELECT * FROM patient_vitals WHERE patient_id = ? ORDER BY id DESC LIMIT 1`,
+      [patientId]
+    )
+    const vitals = patientVitals[0];
     // Compose full response
     if (profile) {
       const response = {
@@ -387,12 +381,6 @@ const getPatientDataById = async (req, res) => {
         lastVisit: profile.last_visit,
         emergencyContact: profile.emergency_contact,
         ethnicity: profile.ethnicity,
-        height: profile.height,
-        weight: profile.dry_weight,
-        bmi: profile.bmi,
-        bloodPressure: profile.bp,
-        heartRate: profile.heart_rate,
-        temperature: profile.temp,
         patientService: profile.service_type,
         allergies,
         insurance: insurances,
@@ -403,6 +391,12 @@ const getPatientDataById = async (req, res) => {
         createdBy: notes?.[0]?.created_by || null,
         created: profile.created,
         patientId,
+        height:vitals?.height,
+        weight:vitals?.weight,
+        bmi:vitals?.bmi,
+        bloodPressure:vitals?.blood_pressure,
+        heartRate:vitals?.heart_rate,
+        temperature:vitals?.temperature,
       };
       return res.status(200).json({
         success: true,
@@ -445,12 +439,6 @@ const editPatientDataById = async (req, res) => {
       lastVisit,
       emergencyContact,
       ethnicity,
-      height,
-      weight,
-      bmi,
-      bloodPressure,
-      heartRate,
-      temperature,
       allergies,
       insurance,
       currentMedications,
@@ -460,42 +448,36 @@ const editPatientDataById = async (req, res) => {
     } = req.body;
 
     // 1. Update user profile
-    const profileQuery = `
-    UPDATE user_profiles SET
-      firstname = ?, middlename = ?, lastname = ?, dob = ?, work_email = ?, phone = ?,
-      gender = ?, ethnicity = ?, last_visit = ?, emergency_contact = ?, height = ?,
-      dry_weight = ?, bmi = ?, status = ?, address_line = ?, address_line_2 = ?, city = ?,
-      state = ?, country = ?, zip = ?, bp = ?, heart_rate = ?, temp = ?,service_type =?
-    WHERE fk_userid = ?;
-  `;
+const profileQuery = `
+  UPDATE user_profiles SET
+    firstname = ?, middlename = ?, lastname = ?, dob = ?, work_email = ?, phone = ?,
+    gender = ?, ethnicity = ?, last_visit = ?, emergency_contact = ?,
+    address_line = ?, address_line_2 = ?, city = ?, state = ?, country = ?, zip = ?,
+    service_type = ?
+  WHERE fk_userid = ?;
+`;
 
-    const profileValues = [
-      firstName,
-      middleName,
-      lastName,
-      birthDate,
-      email,
-      phone,
-      gender,
-      ethnicity,
-      lastVisit,
-      emergencyContact,
-      height,
-      weight,
-      bmi,
-      status,
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      country,
-      zipCode,
-      bloodPressure,
-      heartRate,
-      temperature,
-      JSON.stringify(patientService),
-      patientId // for WHERE clause
-    ];
+
+ const profileValues = [
+  firstName,
+  middleName,
+  lastName,
+  birthDate,
+  email,
+  phone,
+  gender,
+  ethnicity,
+  lastVisit,
+  emergencyContact,
+  addressLine1,
+  addressLine2,
+  city,
+  state,
+  country,
+  zipCode,
+  JSON.stringify(patientService),
+  patientId // for WHERE clause
+];
     await connection.query(profileQuery, profileValues);
 
     // 2. Update users table (username = email)
@@ -506,127 +488,266 @@ const editPatientDataById = async (req, res) => {
 
 
 
+// 6. Update diagnosis
+if (diagnosis && diagnosis.length > 0) {
+  // Step 1: Get all diagnosis IDs from input
+  const diagIds = diagnosis
+    .filter(diag => diag.id)
+    .map(diag => diag.id);
 
+  // Step 2: Delete old diagnoses that are not in current list
+  if (diagIds.length) {
+    const placeholders = diagIds.map(() => '?').join(',');
+    await connection.query(
+      `DELETE FROM patient_diagnoses WHERE patient_id = ? AND id NOT IN (${placeholders})`,
+      [patientId, ...diagIds]
+    );
+  } else {
+    // No valid IDs in list — delete all
+    await connection.query(
+      `DELETE FROM patient_diagnoses WHERE patient_id = ?`,
+      [patientId]
+    );
+  }
 
-
-
-
-    // 6. Update diagnosis
-    if (diagnosis && diagnosis.length > 0) {
-      console.log(`Deleting old diagnoses for patient_id = ${patientId}`);
-
-      // Step 1: Delete old entries ONCE
+  // Step 3: Insert or update each diagnosis
+  for (const diag of diagnosis || []) {
+    if (diag.id) {
+      // Update existing diagnosis
       await connection.query(
-        `DELETE FROM patient_diagnoses WHERE patient_id = ?`,
-        [patientId]
+        `UPDATE patient_diagnoses
+         SET date = ?, icd10 = ?, diagnosis = ?, status = ?, type = ?
+         WHERE id = ? AND patient_id = ?`,
+        [diag.date, diag.icd10, diag.diagnosis, diag.status, diag.type, diag.id, patientId]
       );
-
-      for (const diag of diagnosis) {
-        if (diag.id) {
-          await connection.query(
-            `INSERT INTO patient_diagnoses (id, date, icd10, diagnosis, status, patient_id, type)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [diag.id, diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
-          );
-          console.log("Inserted with existing ID:", diag.id);
-        } else {
-          await connection.query(
-            `INSERT INTO patient_diagnoses (date, icd10, diagnosis, status, patient_id, type)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
-          );
-          console.log("Inserted new diagnosis entry without ID");
-        }
-      }
-
-      console.log("All new diagnosis entries inserted for patient:", patientId);
+      console.log("Updated diagnosis ID:", diag.id);
     } else {
-      console.log("No diagnosis entries provided; skipping update.");
+      // Insert new diagnosis
+      const [result] = await connection.query(
+        `INSERT INTO patient_diagnoses
+         (date, icd10, diagnosis, status, patient_id, type)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [diag.date, diag.icd10, diag.diagnosis, diag.status, patientId, diag.type]
+      );
+      console.log("Inserted new diagnosis ID:", result.insertId);
     }
+  }
+
+  console.log("Diagnosis update completed for patient:", patientId);
+} else {
+  // Step 4: If no diagnosis entries, delete all for patient
+  await connection.query(
+    `DELETE FROM patient_diagnoses WHERE patient_id = ?`,
+    [patientId]
+  );
+  console.log("No diagnosis entries provided. All deleted for patient:", patientId);
+}
 
 
 
+ // 1. Allergies
+if (allergies && allergies.length > 0) {
+  // Step 1: Extract valid allergy IDs
+  const allergyIds = allergies
+    .filter(allergy => allergy.id)
+    .map(allergy => allergy.id);
 
-    // 1. Allergies
-    for (const allergy of allergies || []) {
-      console.log("Processing allergy:", allergy);
+  // Step 2: Delete allergies not present in the input list
+  if (allergyIds.length) {
+    const placeholders = allergyIds.map(() => '?').join(',');
+    await connection.query(
+      `DELETE FROM allergies WHERE patient_id = ? AND id NOT IN (${placeholders})`,
+      [patientId, ...allergyIds]
+    );
+  } else {
+    // If no valid IDs, delete all allergies for patient
+    await connection.query(
+      `DELETE FROM allergies WHERE patient_id = ?`,
+      [patientId]
+    );
+  }
 
-      if (allergy.id) {
-        const [result] = await connection.query(
-          `UPDATE allergies SET category = ?, allergen = ?, reaction = ? WHERE id = ? AND patient_id = ?`,
-          [allergy.category, allergy.allergen, allergy.reaction, allergy.id, patientId]
-        );
-        console.log("Updated allergy ID:", allergy.id, result);
-      } else {
-        const [result] = await connection.query(
-          `INSERT INTO allergies (category, allergen, reaction, patient_id) VALUES (?, ?, ?, ?)`,
-          [allergy.category, allergy.allergen, allergy.reaction, patientId]
-        );
-        console.log("Inserted new allergy:", result);
-      }
+  // Step 3: Update or insert allergies
+  for (const allergy of allergies || []) {
+    if (allergy.id) {
+      const [result] = await connection.query(
+        `UPDATE allergies
+         SET category = ?, allergen = ?, reaction = ?
+         WHERE id = ? AND patient_id = ?`,
+        [allergy.category, allergy.allergen, allergy.reaction, allergy.id, patientId]
+      );
+      console.log("Updated allergy ID:", allergy.id);
+    } else {
+      const [result] = await connection.query(
+        `INSERT INTO allergies (category, allergen, reaction, patient_id)
+         VALUES (?, ?, ?, ?)`,
+        [allergy.category, allergy.allergen, allergy.reaction, patientId]
+      );
+      console.log("Inserted new allergy ID:", result.insertId);
     }
+  }
 
-    // 2. Insurance
-    for (const ins of insurance || []) {
-      console.log("Processing insurance:", ins);
+  console.log("Allergy update completed for patient:", patientId);
+} else {
+  // Step 4: No allergies provided – delete all for patient
+  await connection.query(
+    `DELETE FROM allergies WHERE patient_id = ?`,
+    [patientId]
+  );
+  console.log("No allergy entries provided. All deleted for patient:", patientId);
+}
 
-      if (ins.patient_insurance_id) {
-        const [result] = await connection.query(
-          `UPDATE patient_insurances SET 
-        insurance_policy_number = ?, insurance_group_number = ?, insurance_company = ?,
-        insurance_plan = ?, insurance_expiry = ?, insurance_type = ?, effective_date = ?
-       WHERE patient_insurance_id = ? AND fk_userid = ?`,
-          [
-            ins.policyNumber, ins.groupNumber, ins.company,
-            ins.plan, ins.expirationDate, ins.type, ins.effectiveDate,
-            ins.patient_insurance_id, patientId
-          ]
-        );
-        console.log("Updated insurance ID:", ins.patient_insurance_id, result);
-      } else {
-        const [result] = await connection.query(
-          `INSERT INTO patient_insurances (
-        insurance_policy_number, insurance_group_number, insurance_company,
-        insurance_plan, insurance_expiry, insurance_type, effective_date, fk_userid
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            ins.policyNumber, ins.groupNumber, ins.company,
-            ins.plan, ins.expirationDate, ins.type, ins.effectiveDate,
-            patientId
-          ]
-        );
-        console.log("Inserted new insurance:", result);
-      }
+
+ // 2. Insurance
+if (insurance && insurance.length > 0) {
+  // Step 1: Extract all valid insurance IDs
+  const insuranceIds = insurance
+    .filter(ins => ins.patient_insurance_id)
+    .map(ins => ins.patient_insurance_id);
+
+  // Step 2: Delete old insurance entries not in current list
+  if (insuranceIds.length) {
+    const placeholders = insuranceIds.map(() => '?').join(',');
+    await connection.query(
+      `DELETE FROM patient_insurances
+       WHERE fk_userid = ? AND patient_insurance_id NOT IN (${placeholders})`,
+      [patientId, ...insuranceIds]
+    );
+  } else {
+    // If no valid IDs, delete all for the patient
+    await connection.query(
+      `DELETE FROM patient_insurances WHERE fk_userid = ?`,
+      [patientId]
+    );
+  }
+
+  // Step 3: Update or insert each insurance entry
+  for (const ins of insurance || []) {
+    if (ins.patient_insurance_id) {
+      const [result] = await connection.query(
+        `UPDATE patient_insurances SET
+           insurance_policy_number = ?, insurance_group_number = ?, insurance_company = ?,
+           insurance_plan = ?, insurance_expiry = ?, insurance_type = ?, effective_date = ?
+         WHERE patient_insurance_id = ? AND fk_userid = ?`,
+        [
+          ins.policyNumber,
+          ins.groupNumber,
+          ins.company,
+          ins.plan,
+          ins.expirationDate,
+          ins.type,
+          ins.effectiveDate,
+          ins.patient_insurance_id,
+          patientId
+        ]
+      );
+      console.log("Updated insurance ID:", ins.patient_insurance_id);
+    } else {
+      const [result] = await connection.query(
+        `INSERT INTO patient_insurances (
+           insurance_policy_number, insurance_group_number, insurance_company,
+           insurance_plan, insurance_expiry, insurance_type, effective_date, fk_userid
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          ins.policyNumber,
+          ins.groupNumber,
+          ins.company,
+          ins.plan,
+          ins.expirationDate,
+          ins.type,
+          ins.effectiveDate,
+          patientId
+        ]
+      );
+      console.log("Inserted new insurance ID:", result.insertId);
     }
+  }
 
-    // 3. Medications
-    for (const med of currentMedications || []) {
-      console.log("Processing medication:", med);
+  console.log("Insurance update completed for patient:", patientId);
+} else {
+  // Step 4: If no insurance entries, delete all
+  await connection.query(
+    `DELETE FROM patient_insurances WHERE fk_userid = ?`,
+    [patientId]
+  );
+  console.log("No insurance entries provided. All deleted for patient:", patientId);
+}
 
-      if (med.id) {
-        const [result] = await connection.query(
-          `UPDATE patient_medication SET
-        name = ?, dosage = ?, frequency = ?, prescribedBy = ?, startDate = ?, endDate = ?, status = ?
-       WHERE id = ? AND patient_id = ?`,
-          [
-            med.name, med.dosage, med.frequency, med.prescribedBy,
-            med.startDate, med.endDate, med.status, med.id, patientId
-          ]
-        );
-        console.log("Updated medication ID:", med.id, result);
-      } else {
-        const [result] = await connection.query(
-          `INSERT INTO patient_medication (
-        name, dosage, frequency, prescribedBy, startDate, endDate, status, patient_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            med.name, med.dosage, med.frequency, med.prescribedBy,
-            med.startDate, med.endDate, med.status, patientId
-          ]
-        );
-        console.log("Inserted new medication:", result);
-      }
+  // 3. Medications
+if (currentMedications && currentMedications.length > 0) {
+  // Step 1: Extract valid medication IDs
+  const medicationIds = currentMedications
+    .filter(med => med.id)
+    .map(med => med.id);
+
+  // Step 2: Delete old medications not in the current list
+  if (medicationIds.length) {
+    const placeholders = medicationIds.map(() => '?').join(',');
+    await connection.query(
+      `DELETE FROM patient_medication
+       WHERE patient_id = ? AND id NOT IN (${placeholders})`,
+      [patientId, ...medicationIds]
+    );
+  } else {
+    // If no valid IDs, delete all medications for the patient
+    await connection.query(
+      `DELETE FROM patient_medication WHERE patient_id = ?`,
+      [patientId]
+    );
+  }
+
+  // Step 3: Update or insert each medication
+  for (const med of currentMedications || []) {
+    if (med.id) {
+      const [result] = await connection.query(
+        `UPDATE patient_medication SET
+           name = ?, dosage = ?, frequency = ?, prescribedBy = ?,
+           startDate = ?, endDate = ?, status = ?
+         WHERE id = ? AND patient_id = ?`,
+        [
+          med.name,
+          med.dosage,
+          med.frequency,
+          med.prescribedBy,
+          med.startDate,
+          med.endDate,
+          med.status,
+          med.id,
+          patientId
+        ]
+      );
+      console.log("Updated medication ID:", med.id);
+    } else {
+      const [result] = await connection.query(
+        `INSERT INTO patient_medication (
+           name, dosage, frequency, prescribedBy,
+           startDate, endDate, status, patient_id
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          med.name,
+          med.dosage,
+          med.frequency,
+          med.prescribedBy,
+          med.startDate,
+          med.endDate,
+          med.status,
+          patientId
+        ]
+      );
+      console.log("Inserted new medication ID:", result.insertId);
     }
+  }
+
+  console.log("Medication update completed for patient:", patientId);
+} else {
+  // Step 4: No medications provided — delete all for patient
+  await connection.query(
+    `DELETE FROM patient_medication WHERE patient_id = ?`,
+    [patientId]
+  );
+  console.log("No medication entries provided. All deleted for patient:", patientId);
+}
+
 
     // 4. Notes
   const noteIds = notes
@@ -1683,7 +1804,7 @@ const fetchDataByPatientId = async (req, res) => {
     );
 
     const [notes] = await connection.query(
-      `SELECT note, created, created_by, note_id,duration
+      `SELECT note, created,type, created_by, note_id,duration
        FROM notes
        WHERE patient_id = ?
          AND created BETWEEN ? AND ?`,
@@ -1861,7 +1982,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     );
 
     const [notes] = await connection.query(
-      `SELECT note, created,duration, created_by, note_id
+      `SELECT note, created,duration,type, created_by, note_id
        FROM notes
        WHERE patient_id = ?
          AND created BETWEEN ? AND ?`,
