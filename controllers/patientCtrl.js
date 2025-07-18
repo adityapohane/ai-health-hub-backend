@@ -198,11 +198,12 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     const sql6 = `INSERT INTO notes (
   patient_id,
   note,
-  duration
+  duration,
+  type,
   created_by
 ) VALUES (?, ?, ?, ?);`;
     notes?.map(async (note) => {
-      const values6 = [insertedId, note.note, note.duration, user_id];
+      const values6 = [insertedId, note.note, note.duration,note.type, user_id];
       const [noteResult] = await connection.query(sql6, values6);
     });
 
@@ -629,7 +630,7 @@ const editPatientDataById = async (req, res) => {
 
     // 4. Notes
     for (const note of notes || []) {
-      console.log("Processing note:", note);
+      // console.log("Processing note:", note);
 
       if (note.note_id) {
         const [result] = await connection.query(
