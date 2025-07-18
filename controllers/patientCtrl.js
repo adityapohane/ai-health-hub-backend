@@ -795,7 +795,7 @@ WHERE patient_id = ${patientId} `);
 
 const getAllPatients = async (req, res) => {
   try {
-    let { page = 1, limit = 10, order = "DESC", orderBy = "last_visit" } = req.query;
+    let { page = 1, limit = 10, order = "DESC", orderBy = "fk_userid" } = req.query;
 
     page = parseInt(page);
     limit = parseInt(limit);
@@ -816,6 +816,7 @@ const getAllPatients = async (req, res) => {
       "bp",
       "heart_rate",
       "temp",
+      "created"
     ];
     const allowedOrder = ["ASC", "DESC"];
 
