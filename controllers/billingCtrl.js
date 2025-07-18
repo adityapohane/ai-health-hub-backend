@@ -49,20 +49,30 @@ const getAllPatients = async (req, res) => {
         const total = patients?.length ? patients.length : 0 ;
 
         for (const patient of patients) {
-        const [rows] = await connection.query(
-          `
-         SELECT (
-    SELECT IFNULL(SUM(duration), 0)
-    FROM (
+     const [rows] = await connection.query(
+  `
+  SELECT 
+    (
+      SELECT IFNULL(SUM(duration), 0)
+      FROM (
         SELECT DISTINCT created, duration
         FROM notes
         WHERE patient_id = ?
-        AND created BETWEEN '${startDate}' AND '${endDate}'
-    ) AS unique_notes
-) AS total_minutes;
-          `,
-          [patient.patient_id]
-        );
+        AND created BETWEEN ? AND ?
+      ) AS unique_notes
+    ) +
+    (
+      SELECT IFNULL(SUM(duration), 0)
+      FROM (
+        SELECT DISTINCT created, duration
+        FROM tasks
+        WHERE patient_id = ?
+        AND created BETWEEN ? AND ?
+      ) AS unique_tasks
+    ) AS total_minutes;
+  `,
+  [patient.patient_id, startDate, endDate, patient.patient_id, startDate, endDate]
+);
         patient.total_minutes = rows[0].total_minutes;
         const idsArray = String(patient.billing_ids).split(',').map(id => id.trim());
         const sql2 = `SELECT cpt_code_id,cc.code,code_units,created,cc.price from cpt_billing LEFT JOIN cpt_codes cc ON cc.id = cpt_code_id WHERE cpt_billing.id IN (${idsArray.join(",")})`

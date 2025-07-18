@@ -35,20 +35,30 @@ const checkMinutesForPatient = async () => {
     for (const patient of rpmPatients) {
       const { patient_id, service_type } = patient;
       console.log("Billing for service type", service_type, "for patient", patient_id)
-         const [rows] = await connection.query(
-          `
-          SELECT (
-    SELECT IFNULL(SUM(duration), 0)
-    FROM (
+        const [rows] = await connection.query(
+  `
+  SELECT 
+    (
+      SELECT IFNULL(SUM(duration), 0)
+      FROM (
         SELECT DISTINCT created, duration
         FROM notes
         WHERE patient_id = ?
-        AND created BETWEEN '${startDate}' AND '${endDate}'
-    ) AS unique_notes
-) AS total_minutes;
-          `,
-          [patient_id]
-        );
+        AND created BETWEEN ? AND ?
+      ) AS unique_notes
+    ) +
+    (
+      SELECT IFNULL(SUM(duration), 0)
+      FROM (
+        SELECT DISTINCT created, duration
+        FROM tasks
+        WHERE patient_id = ?
+        AND created BETWEEN ? AND ?
+      ) AS unique_tasks
+    ) AS total_minutes;
+  `,
+  [patient_id, startDate, endDate, patient_id, startDate, endDate]
+);
 
         const total_minutes = rows[0].total_minutes;
 
