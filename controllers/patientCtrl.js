@@ -885,7 +885,7 @@ END AS status,
         const [rows] = await connection.query(
           `SELECT icd10, diagnosis, status, id, type
            FROM patient_diagnoses
-           WHERE patient_id = ?`,
+           WHERE patient_id = ? ORDER BY id DESC`,
           [patient.patientId]
         );
 
@@ -1107,6 +1107,7 @@ const getAllPatientTasks = async (req, res) => {
     if (type) {
       sql += ` AND type = '${type}'`;
     }
+    sql+= '  ORDER BY id DESC'
     const [taskDetails] = await connection.query(sql, [patientId]);
 
     if (!taskDetails || taskDetails.length === 0) {
@@ -1342,6 +1343,7 @@ const getPatientDiagnosis = async (req, res) => {
     sql += ` AND id = ${diagnosisId}`;
   }
 
+  sql += ' ORDER BY id DESC'
 
   try {
     const [diagnosis] = await connection.query(
@@ -1828,7 +1830,7 @@ const fetchDataByPatientId = async (req, res) => {
       `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id
        FROM patient_medication
        WHERE patient_id = ?
-         AND created_at BETWEEN ? AND ?`,
+         AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
 
@@ -1837,7 +1839,7 @@ const fetchDataByPatientId = async (req, res) => {
       `SELECT date, icd10, diagnosis, status, id, type
        FROM patient_diagnoses
        WHERE patient_id = ?
-         AND created_at BETWEEN ? AND ?`,
+         AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
 
@@ -1845,7 +1847,7 @@ const fetchDataByPatientId = async (req, res) => {
       `SELECT note, created,type, created_by, note_id,duration
        FROM notes
        WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
+         AND created BETWEEN ? AND ? ORDER BY note_id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
     const [vitals] = await connection.query(
@@ -1859,7 +1861,7 @@ const fetchDataByPatientId = async (req, res) => {
       `SELECT *
        FROM tasks
        WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
+         AND created BETWEEN ? AND ? ORDER BY id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
     // #production
@@ -2016,7 +2018,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
       `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id
        FROM patient_medication
        WHERE patient_id = ?
-         AND created_at BETWEEN ? AND ?`,
+         AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
 
@@ -2025,7 +2027,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
       `SELECT date, icd10, diagnosis, status, id, type
        FROM patient_diagnoses
        WHERE patient_id = ?
-         AND created_at BETWEEN ? AND ?`,
+         AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
 
@@ -2033,7 +2035,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
       `SELECT note, created,duration,type, created_by, note_id
        FROM notes
        WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
+         AND created BETWEEN ? AND ? ORDER BY note_id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
     const [vitals] = await connection.query(
@@ -2047,7 +2049,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
       `SELECT *
        FROM tasks
        WHERE patient_id = ?
-         AND created BETWEEN ? AND ?`,
+         AND created BETWEEN ? AND ? ORDER BY id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
     const [minutes] = await connection.query(
