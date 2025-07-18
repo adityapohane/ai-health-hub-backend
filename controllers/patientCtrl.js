@@ -629,6 +629,16 @@ const editPatientDataById = async (req, res) => {
     }
 
     // 4. Notes
+  const noteIds = notes
+  .filter(note => note.note_id)        // Keep only notes with a note_id
+  .map(note => note.note_id);
+  if(noteIds.length){
+    const deleteids = await connection.query(`DELETE FROM notes
+WHERE note_id NOT IN (${noteIds.join(",")});`);
+  }else{
+    const deleteids = await connection.query(`DELETE FROM notes
+WHERE patient_id = ${patientId} `);
+  }
     for (const note of notes || []) {
       // console.log("Processing note:", note);
 
@@ -640,7 +650,7 @@ const editPatientDataById = async (req, res) => {
         console.log("Updated note ID:", note.note_id, result);
       } else {
         const [result] = await connection.query(
-          `INSERT INTO notes (note,type, patient_id,duration, created_by) VALUES (?, ?, ?,?)`,
+          `INSERT INTO notes (note,type, patient_id,duration, created_by) VALUES (?, ?, ?,?,?)`,
           [note.note, note.type, patientId, note.duration, note.created_by || null]
         );
         console.log("Inserted new note:", result);
