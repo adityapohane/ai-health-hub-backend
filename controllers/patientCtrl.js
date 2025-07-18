@@ -201,7 +201,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
   duration,
   type,
   created_by
-) VALUES (?, ?, ?, ?);`;
+) VALUES (?, ?, ?, ?, ?);`;
     notes?.map(async (note) => {
       const values6 = [insertedId, note.note, note.duration,note.type, user_id];
       const [noteResult] = await connection.query(sql6, values6);
@@ -248,7 +248,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
 const getPatientDataById = async (req, res) => {
   try {
     // const { patientId } = req.query;
-    console.log(req.user)
+    // console.log(req.user)
     const { roleid, user_id } = req.user;
     let patientId;
 
@@ -346,24 +346,24 @@ const getPatientDataById = async (req, res) => {
     // Get medications
     const [currentMedications] = await connection.query(
       `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status ,id
-       FROM patient_medication WHERE patient_id = ?`,
+       FROM patient_medication WHERE patient_id = ? ORDER BY id DESC`,
       [patientId]
     );
 
     // Get diagnoses
     const [diagnosis] = await connection.query(
       `SELECT date, icd10, diagnosis, status ,id,type
-       FROM patient_diagnoses WHERE patient_id = ?`,
+       FROM patient_diagnoses WHERE patient_id = ? ORDER BY id DESC`,
       [patientId]
     );
 
     // Get notes
     const [notes] = await connection.query(
-      `SELECT note, created,duration, created_by ,note_id FROM notes WHERE patient_id = ?`,
+      `SELECT note, created,duration, created_by ,note_id FROM notes WHERE patient_id = ? ORDER BY note_id DESC`,
       [patientId]
     );
     const [tasks] = await connection.query(
-      `SELECT * FROM tasks WHERE patient_id = ?`,
+      `SELECT * FROM tasks WHERE patient_id = ? ORDER BY id DESC`,
       [patientId]
     );
 
@@ -1268,6 +1268,7 @@ const getPatientNotes = async (req, res) => {
     if (type) {
       sql += ` AND type = ${type}`;
     }
+    sql+= ` order by note_id DESC`
     const [notes] = await connection.query(sql, [patientId]);
 
     res.status(200).json({
