@@ -1594,30 +1594,63 @@ const getPatientTimings = async (req, res) => {
   const endDate = queryDate.clone().endOf('month').format('YYYY-MM-DD HH:mm:ss');
   console.log(patientId, user_id, patientId, user_id)
   try {
-    const [rows] = await connection.query(
-  `
-  SELECT 
-    (
-      SELECT IFNULL(SUM(duration), 0)
-      FROM (
-        SELECT DISTINCT created, duration
-        FROM notes
-        WHERE patient_id = ?
-        AND created BETWEEN ? AND ?
-      ) AS unique_notes
-    ) +
-    (
-      SELECT IFNULL(SUM(duration), 0)
-      FROM (
-        SELECT DISTINCT created, duration
-        FROM tasks
-        WHERE patient_id = ?
-        AND created BETWEEN ? AND ?
-      ) AS unique_tasks
-    ) AS total_minutes;
-  `,
-  [patientId, startDate, endDate, patientId, startDate, endDate]
-);
+    const [rows] = await connection.query(`
+      SELECT
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND type LIKE '%rpm%' AND created BETWEEN ? AND ?
+          ) AS rpm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND type LIKE '%rpm%' AND created BETWEEN ? AND ?
+          ) AS rpm_tasks
+        ) AS rpm_minutes,
+    
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND  type LIKE '%ccm%' AND created BETWEEN ? AND ?
+          ) AS ccm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND  type LIKE '%ccm%' AND created BETWEEN ? AND ?
+          ) AS ccm_tasks
+        ) AS ccm_minutes,
+    
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND  type LIKE '%pcm%' AND created BETWEEN ? AND ?
+          ) AS pcm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND type LIKE '%pcm%' AND created BETWEEN ? AND ?
+          ) AS pcm_tasks
+        ) AS pcm_minutes
+    `, [
+      patientId, startDate, endDate, patientId, startDate, endDate,  // RPM
+      patientId, startDate, endDate, patientId, startDate, endDate,  // CCM
+      patientId, startDate, endDate, patientId, startDate, endDate   // PCM
+    ]);
 
 
     const [tasks] = await connection.query(
@@ -1659,12 +1692,15 @@ const getPatientTimings = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Patient timings fetched successfully',
-      totalMinutes: rows.length ? rows[0].total_minutes : 0,
+      totalMinutes: rows[0]?.rpm_minutes + rows[0]?.ccm_minutes + rows[0]?.pcm_minutes,
       totalAmount: total,
       tasks: [ ...tasks],
       notes: [...notes],
       cpt_data: [...data],
-      filterRange: { startDate, endDate }
+      filterRange: { startDate, endDate },
+      rpm_minutes: rows.length ? rows[0].rpm_minutes : 0,
+      ccm_minutes: rows.length ? rows[0].ccm_minutes : 0,
+      pcm_minutes: rows.length ? rows[0].pcm_minutes : 0
     });
   } catch (error) {
     console.error('Error fetching patient timings:', error.message);
@@ -1865,32 +1901,66 @@ const fetchDataByPatientId = async (req, res) => {
       [patientId, startOfMonth, endOfMonth]
     );
     // #production
-    const [minutes] = await connection.query(
-  `
-  SELECT 
-    (
-      SELECT IFNULL(SUM(duration), 0)
-      FROM (
-        SELECT DISTINCT created, duration
-        FROM notes
-        WHERE patient_id = ?
-        AND created BETWEEN ? AND ?
-      ) AS unique_notes
-    ) +
-    (
-      SELECT IFNULL(SUM(duration), 0)
-      FROM (
-        SELECT DISTINCT created, duration
-        FROM tasks
-        WHERE patient_id = ?
-        AND created BETWEEN ? AND ?
-      ) AS unique_tasks
-    ) AS total_minutes;
-  `,
-  [patientId, startOfMonth, endOfMonth, patientId, endOfMonth, endOfMonth]
-);
-    let minutesObj = calculateBilledMinutes(minutes[0]?.total_minutes)
-    console.log(minutes)
+    const [rows] = await connection.query(`
+      SELECT
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND type LIKE '%rpm%' AND created BETWEEN ? AND ?
+          ) AS rpm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND type LIKE '%rpm%' AND created BETWEEN ? AND ?
+          ) AS rpm_tasks
+        ) AS rpm_minutes,
+    
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND  type LIKE '%ccm%' AND created BETWEEN ? AND ?
+          ) AS ccm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND  type LIKE '%ccm%' AND created BETWEEN ? AND ?
+          ) AS ccm_tasks
+        ) AS ccm_minutes,
+    
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND  type LIKE '%pcm%' AND created BETWEEN ? AND ?
+          ) AS pcm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND type LIKE '%pcm%' AND created BETWEEN ? AND ?
+          ) AS pcm_tasks
+        ) AS pcm_minutes
+    `, [
+      patientId,  startOfMonth, endOfMonth, patientId, startOfMonth, endOfMonth,  // RPM
+      patientId, startOfMonth, endOfMonth, patientId, startOfMonth, endOfMonth,  // CCM
+      patientId, startOfMonth, endOfMonth, patientId, startOfMonth, endOfMonth   // PCM
+    ]);
+    let totalMinutes = rows[0]?.rpm_minutes + rows[0]?.ccm_minutes + rows[0]?.pcm_minutes;
+    let minutesObj = calculateBilledMinutes(totalMinutes)
+    // console.log(minutes)
     // Compose full response
     if (profile) {
       const response = {
@@ -1932,7 +2002,10 @@ const fetchDataByPatientId = async (req, res) => {
         createdBy: notes?.[0]?.created_by || null,
         created: profile.created,
         patientId,
-        total_minutes: minutesObj
+        total_minutes: minutesObj,
+        rpm_minutes: rows[0]?.rpm_minutes,
+        ccm_minutes: rows[0]?.ccm_minutes,
+        pcm_minutes: rows[0]?.pcm_minutes
       };
       console.log(startOfMonth, endOfMonth)
       return res.status(200).json({
@@ -2052,31 +2125,65 @@ const fetchDataByPatientIdForccm = async (req, res) => {
          AND created BETWEEN ? AND ? ORDER BY id DESC`,
       [patientId, startOfMonth, endOfMonth]
     );
-    const [minutes] = await connection.query(
-  `
-  SELECT 
-    (
-      SELECT IFNULL(SUM(duration), 0)
-      FROM (
-        SELECT DISTINCT created, duration
-        FROM notes
-        WHERE patient_id = ?
-        AND created BETWEEN ? AND ?
-      ) AS unique_notes
-    ) +
-    (
-      SELECT IFNULL(SUM(duration), 0)
-      FROM (
-        SELECT DISTINCT created, duration
-        FROM tasks
-        WHERE patient_id = ?
-        AND created BETWEEN ? AND ?
-      ) AS unique_tasks
-    ) AS total_minutes;
-  `,
-  [patientId, startOfMonth, endOfMonth, patientId, startOfMonth, endOfMonth]
-);
-    let minutesObj = calculateBilledMinutes(minutes[0]?.total_minutes)
+    const [rows] = await connection.query(`
+      SELECT
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND type LIKE '%rpm%' AND created BETWEEN ? AND ?
+          ) AS rpm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND type LIKE '%rpm%' AND created BETWEEN ? AND ?
+          ) AS rpm_tasks
+        ) AS rpm_minutes,
+    
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND  type LIKE '%ccm%' AND created BETWEEN ? AND ?
+          ) AS ccm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND  type LIKE '%ccm%' AND created BETWEEN ? AND ?
+          ) AS ccm_tasks
+        ) AS ccm_minutes,
+    
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM notes
+            WHERE patient_id = ? AND  type LIKE '%pcm%' AND created BETWEEN ? AND ?
+          ) AS pcm_notes
+        ) +
+        (
+          SELECT IFNULL(SUM(duration), 0)
+          FROM (
+            SELECT DISTINCT created, duration
+            FROM tasks
+            WHERE patient_id = ? AND type LIKE '%pcm%' AND created BETWEEN ? AND ?
+          ) AS pcm_tasks
+        ) AS pcm_minutes
+    `, [
+      patientId, startOfMonth, endOfMonth, patientId, startOfMonth, endOfMonth,  // RPM
+      patientId, startOfMonth, endOfMonth, patientId, startOfMonth, endOfMonth,  // CCM
+      patientId, startOfMonth, endOfMonth, patientId, startOfMonth, endOfMonth   // PCM
+    ]);
+    let total_minutes = rows[0]?.rpm_minutes + rows[0]?.ccm_minutes + rows[0]?.pcm_minutes;
+    let minutesObj = calculateBilledMinutes(total_minutes)
     if (profile) {
       const response = {
         firstName: profile.firstname,
@@ -2100,7 +2207,10 @@ const fetchDataByPatientIdForccm = async (req, res) => {
         createdBy: notes?.[0]?.created_by || null,
         created: profile.created,
         patientId,
-        timings: minutesObj,
+        total_minutes: minutesObj,
+        rpm_minutes: rows[0]?.rpm_minutes,
+        ccm_minutes: rows[0]?.ccm_minutes,
+        pcm_minutes: rows[0]?.pcm_minutes,
         providerId: profile.physicianId,
         providerName: profile.physicianName,
         providerState: profile.physicianState,
