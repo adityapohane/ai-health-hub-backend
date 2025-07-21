@@ -1,4 +1,4 @@
-const TwilioService = require('../services/twilioService');
+const TwilioService = require('../utils/twilioService');
 
 exports.sendSMS = async (req, res) => {
     try {
