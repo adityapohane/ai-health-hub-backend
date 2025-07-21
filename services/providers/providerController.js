@@ -240,6 +240,48 @@ const addPatientBillingNote =  async (req, res) => {
     res.status(500).json({success:false, message: 'Internal server error.' });
   }
 };
+const providerDashboardCount = async (req, res) => {
+  try {
+    const { user_id } = req.user;
+    if (!user_id) {
+      return res.status(400).json({ message: 'Missing user_id in request.' });
+    }
+    const sql = `
+      SELECT COUNT(*) as todays_appointments
+      FROM appointment
+      WHERE DATE(date) = CURDATE()
+      AND provider_id = ?
+    `;
+    const [rows] = await connection.query(sql, [user_id]);
+    let todays_appointments = rows[0]?.todays_appointments || 0
+
+    const [data] = await connection.query(`
+      SELECT COUNT(*) as totalPatients FROM users_mappings WHERE fk_physician_id = ? AND fk_role_id = 7
+    `,[user_id])
+    let total_patients = data[0]?.total_patients || 0
+
+    const [data2] = await connection.query(`
+      SELECT count(*) as teleCount  FROM appointment WHERE type LIKE '%telehealth%' AND provider_id = ?
+    `,[user_id])
+    const [data3] = await connection.query(`
+      SELECT count(*) as pendingCount  FROM appointment WHERE status LIKE '%pending%' AND provider_id = ?
+    `,[user_id])
+    let teleCount = data2[0]?.teleCount || 0;
+    let pendingCount = data3[0]?.pendingCount;
+    res.status(200).json({
+      success: true,
+      data: {
+        todays_appointments,
+        total_patients,
+        teleCount,
+        pendingCount
+      }
+    });
+  } catch (err) {
+    console.error('Error getting provider dashboard count:', err);
+    res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
 
 module.exports = {
   getAllOrganizations,
@@ -248,5 +290,6 @@ module.exports = {
   getProviders,
   updateProviderInformation,
   getProviderInformation,
-  addPatientBillingNote
+  addPatientBillingNote,
+  providerDashboardCount
 };

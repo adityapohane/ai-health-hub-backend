@@ -6,7 +6,8 @@ const {
   getProviders,
   updateProviderInformation,
   getProviderInformation,
-  addPatientBillingNote
+  addPatientBillingNote,
+  providerDashboardCount
 } = require("./providerController");
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.get("/getProviders", getProviders);
 router.put("/updateProviderInformation", updateProviderInformation)
 router.get("/getProviderInformation", getProviderInformation)
 router.post("/addPatientTimedDetails", addPatientBillingNote)
+router.get("/providerDashboardCount", providerDashboardCount)
 
 module.exports = router;
