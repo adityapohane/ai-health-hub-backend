@@ -283,6 +283,25 @@ const providerDashboardCount = async (req, res) => {
   }
 };
 
+const patientsMedications = async (req, res) => {
+  try {
+    const { user_id } = req.user;
+    if (!user_id) {
+      return res.status(400).json({ message: 'Missing user_id in request.' });
+    }
+    const sql = `SELECT pm.* FROM patient_medication pm LEFT JOIN users_mappings um ON um.user_id = pm.patient_id WHERE um.fk_physician_id = ? ORDER BY pm.id DESC`;
+    const [rows] = await connection.query(sql, [user_id]);
+
+    res.status(200).json({
+      success: true,
+      data: rows
+    });
+  } catch (err) {
+    console.error('Error getting provider dashboard count:', err);
+    res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
+
 module.exports = {
   getAllOrganizations,
   getAllPractices,
@@ -291,5 +310,6 @@ module.exports = {
   updateProviderInformation,
   getProviderInformation,
   addPatientBillingNote,
-  providerDashboardCount
+  providerDashboardCount,
+  patientsMedications
 };
