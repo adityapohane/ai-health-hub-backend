@@ -17,6 +17,7 @@ const locationRoute = require('./location');
 const twilioRoutes = require("./twilioRoutes");
 const documentRoutes = require("./documentRoute");
 const billingRoutes = require("./billingRoutes");
+const ccmRoutes = require("./ccmRoutes");
 
 
 
@@ -37,6 +38,7 @@ router.use('/mio', mioRoutes);
 router.use("/twilio",verifyToken, twilioRoutes);
 router.use("/documents",verifyToken, documentRoutes);
 router.use("/billing",verifyToken, billingRoutes);
+router.use("/ccm",verifyToken, ccmRoutes);
 router.get('/health',verifyToken, (req, res) => {
     res.json({
         status: 'healthy',
