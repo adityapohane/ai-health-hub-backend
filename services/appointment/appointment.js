@@ -151,3 +151,60 @@ exports.getAppointmentsByProviderId = async (req, res) => {
   }
 };
 
+exports.upcomingAppointments = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+
+    if (!providerId) {
+      return res.status(400).json({ message: "Provider ID is required" });
+    }
+
+    const [appointments] = await db.execute(
+      "SELECT * FROM appointment WHERE provider_id = ? AND date > current_timestamp ORDER BY date ASC",
+      [providerId]
+    );
+
+    const transformed = appointments.map((row) => {
+      const utcDate = new Date(row.date); // Date from MySQL (in UTC)
+
+      // ✅ Manually convert to IST by adding 5 hours 30 minutes
+      const istOffset = 5.5 * 60 * 60 * 1000; // 19800000 milliseconds
+      const istDate = new Date(utcDate.getTime() + istOffset);
+
+      // ✅ Format as ISO string with +05:30 manually
+      const pad = (n) => n.toString().padStart(2, '0');
+
+      const yyyy = istDate.getFullYear();
+      const mm = pad(istDate.getMonth() + 1);
+      const dd = pad(istDate.getDate());
+      const hh = pad(istDate.getHours());
+      const min = pad(istDate.getMinutes());
+      const ss = pad(istDate.getSeconds());
+
+      const formattedIST = `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+05:30`;
+
+      return {
+        id: row.id,
+        patient: {
+          id: row.patient_id,
+          name: row.patient_name,
+          phone: row.patient_phone,
+          email: row.patient_email,
+        },
+        date: formattedIST, // ✅ Correctly formatted IST string
+        duration: row.duration,
+        type: row.type,
+        status: row.status,
+        hasBilling: !!row.has_billing,
+        providerId: row.provider_id,
+        locationId: row.location_id,
+        reason: row.reason,
+      };
+    });
+
+    res.status(200).json({ success: true, data: transformed });
+  } catch (err) {
+    console.error("Fetch by provider error:", err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
