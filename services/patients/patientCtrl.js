@@ -453,7 +453,7 @@ const profileQuery = `
     firstname = ?, middlename = ?, lastname = ?, dob = ?, work_email = ?, phone = ?,
     gender = ?, ethnicity = ?, last_visit = ?, emergency_contact = ?,
     address_line = ?, address_line_2 = ?, city = ?, state = ?, country = ?, zip = ?,
-    service_type = ?
+    service_type = ?,status=? 
   WHERE fk_userid = ?;
 `;
 
@@ -476,6 +476,7 @@ const profileQuery = `
   country,
   zipCode,
   JSON.stringify(patientService),
+  status,
   patientId // for WHERE clause
 ];
     await connection.query(profileQuery, profileValues);
