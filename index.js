@@ -61,7 +61,7 @@ const limiter = rateLimit({
 cloudinaryConnect()
 
 // Routes
-const apiRoutes = require("./routes/index")
+const apiRoutes = require("./services/index")
 app.use("/api/v1", apiRoutes)
 app.use("/api/v1/tenovi", require("./routes/tenoviRoutes"));
 
