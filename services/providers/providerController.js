@@ -289,7 +289,7 @@ const patientsMedications = async (req, res) => {
     if (!user_id) {
       return res.status(400).json({ message: 'Missing user_id in request.' });
     }
-    const sql = `SELECT pm.* FROM patient_medication pm LEFT JOIN users_mappings um ON um.user_id = pm.patient_id WHERE um.fk_physician_id = ? ORDER BY pm.id DESC`;
+    const sql = `SELECT pm.*,CONCAT(up.firstname," ",up.lastname) as patient_name FROM patient_medication pm LEFT JOIN users_mappings um ON um.user_id = pm.patient_id JOIN user_profiles up ON up.fk_userid = pm.patient_id WHERE um.fk_physician_id = ? ORDER BY pm.id DESC`;
     const [rows] = await connection.query(sql, [user_id]);
 
     res.status(200).json({
