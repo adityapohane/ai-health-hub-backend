@@ -256,7 +256,7 @@ const providerDashboardCount = async (req, res) => {
     let todays_appointments = rows[0]?.todays_appointments || 0
 
     const [data] = await connection.query(`
-      SELECT COUNT(DISTINCT user_id) AS totalPatients FROM users_mappings WHERE fk_physician_id = ? AND fk_role_id = 7;
+      SELECT COUNT(DISTINCT users.user_id) AS totalPatients FROM users_mappings JOIN users ON users.user_id = users_mappings.user_id WHERE fk_physician_id = ? AND fk_role_id = 7;
     `,[user_id])
     let total_patients = data[0]?.totalPatients || 0
 
