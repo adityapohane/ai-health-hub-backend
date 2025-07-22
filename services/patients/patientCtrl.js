@@ -63,28 +63,29 @@ const addPatient = async (req, res) => {
 INSERT INTO user_profiles (
   firstname, middlename, lastname, dob, work_email, phone,
   gender, ethnicity, last_visit, emergency_contact,
-  address_line, address_line_2, city, state, country, zip, service_type
-)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+  address_line, address_line_2, city, state, country, zip, service_type, status, fk_userid
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 `;  
-  const values1 = [
-  firstName,
-  middleName,
-  lastName,
-  birthDate,
-  email,
-  phone, // 1–6
-  gender,
-  ethnicity,
-  lastVisit,
-  emergencyContact, // 7–10
-  addressLine1,
-  addressLine2,
-  city,
-  state,
-  country,
-  zipCode,
-  JSON.stringify(patientService)
+const values1 = [
+  firstName,        // 1. firstname
+  middleName,       // 2. middlename
+  lastName,         // 3. lastname
+  birthDate,        // 4. dob
+  email,            // 5. work_email
+  phone,            // 6. phone
+  gender,           // 7. gender
+  ethnicity,        // 8. ethnicity
+  lastVisit,        // 9. last_visit
+  emergencyContact, // 10. emergency_contact
+  addressLine1,     // 11. address_line
+  addressLine2,     // 12. address_line_2
+  city,             // 13. city
+  state,            // 14. state
+  country,          // 15. country
+  zipCode,          // 16. zip
+  JSON.stringify(patientService), // 17. service_type
+  status,           // 18. status
+  insertedId        // 19. fk_userid
 ];
 
     const [userResult] = await connection.query(sql1, values1);
@@ -146,12 +147,12 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   name,
   dosage,
   frequency,
-  prescribedBy,
+  prescribed_by,
   startDate,
   endDate,
   status,
   refills
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`;
     currentMedications?.map(async (medication) => {
       const values4 = [
         insertedId,
@@ -337,7 +338,7 @@ const getPatientDataById = async (req, res) => {
 
     // Get medications
     const [currentMedications] = await connection.query(
-      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status ,id,refills
+      `SELECT name, dosage, frequency, prescribed_by, startDate, endDate, status ,id,refills
        FROM patient_medication WHERE patient_id = ? ORDER BY id DESC`,
       [patientId]
     );
@@ -704,7 +705,7 @@ if (currentMedications && currentMedications.length > 0) {
     if (med.id) {
       const [result] = await connection.query(
         `UPDATE patient_medication SET
-           name = ?, dosage = ?, frequency = ?, prescribedBy = ?,
+           name = ?, dosage = ?, frequency = ?, prescribed_by = ?,
            startDate = ?, endDate = ?, status = ?,refills=?
          WHERE id = ? AND patient_id = ?`,
         [
@@ -724,7 +725,7 @@ if (currentMedications && currentMedications.length > 0) {
     } else {
       const [result] = await connection.query(
         `INSERT INTO patient_medication (
-           name, dosage, frequency, prescribedBy,
+           name, dosage, frequency, prescribed_by,
            startDate, endDate, status,refills, patient_id
          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -1536,12 +1537,12 @@ const addPatientMedication = async (req, res) => {
     name,
     dosage,
     frequency,
-    prescribedBy,
     startDate,
     endDate,
     status,
+    refills = 0
   } = { ...req.body, ...req.query };
-
+  const { user_id } = req.user;
   // Basic validation
   if (
     !patientId || !name || !dosage || !frequency
@@ -1557,7 +1558,7 @@ const addPatientMedication = async (req, res) => {
         name,
         dosage,
         frequency,
-        prescribedBy,
+        prescribed_by,
         startDate,
         endDate,
         status,
@@ -1569,7 +1570,7 @@ const addPatientMedication = async (req, res) => {
       name,
       dosage,
       frequency,
-      prescribedBy,
+      user_id,
       startDate,
       endDate,
       status,
@@ -1870,7 +1871,7 @@ const fetchDataByPatientId = async (req, res) => {
 
     // Get medications
     const [currentMedications] = await connection.query(
-      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id,refills
+      `SELECT name, dosage, frequency, prescribed_by, startDate, endDate, status, id,refills
        FROM patient_medication
        WHERE patient_id = ?
          AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
@@ -2095,7 +2096,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     //#production
     // Get medications
     const [currentMedications] = await connection.query(
-      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id,refills
+      `SELECT name, dosage, frequency, prescribed_by, startDate, endDate, status, id,refills
        FROM patient_medication
        WHERE patient_id = ?
          AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
