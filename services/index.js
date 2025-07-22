@@ -18,6 +18,7 @@ const twilioRoutes = require("./twilio/twilioRoutes");
 const documentRoutes = require("./documents/documentRoute");
 const billingRoutes = require("./billings/billingRoutes");
 const ccmRoutes = require("./ccm/ccmRoutes");
+const encountersRoutes = require("./encounters/encounterRoutes");
 
 
 
@@ -39,6 +40,7 @@ router.use("/twilio",verifyToken, twilioRoutes);
 router.use("/documents",verifyToken, documentRoutes);
 router.use("/billing",verifyToken, billingRoutes);
 router.use("/ccm",verifyToken, ccmRoutes);
+router.use("/encounters",verifyToken, encountersRoutes);
 router.get('/health',verifyToken, (req, res) => {
     res.json({
         status: 'healthy',
