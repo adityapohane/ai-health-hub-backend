@@ -453,7 +453,7 @@ const profileQuery = `
     firstname = ?, middlename = ?, lastname = ?, dob = ?, work_email = ?, phone = ?,
     gender = ?, ethnicity = ?, last_visit = ?, emergency_contact = ?,
     address_line = ?, address_line_2 = ?, city = ?, state = ?, country = ?, zip = ?,
-    service_type = ?,status=? 
+    service_type = ?, status=? 
   WHERE fk_userid = ?;
 `;
 
@@ -2258,6 +2258,25 @@ function calculateBilledMinutes(totalMinutes) {
   };
 }
 
+const searchPatient = async (req,res)=>{
+    try {
+        const {searchterm} = req.query;
+        const query = `SELECT CONCAT(up.firstname," ",up.lastname) as patient_name ,up.fk_userid as patient_id FROM user_profiles up LEFT JOIN users_mappings um ON um.user_id = up.fk_userid WHERE um.fk_role_id = 7 AND um.fk_physician_id = ${req.user.user_id} AND (up.firstname LIKE '%${searchterm}%' OR up.middlename LIKE '%${searchterm}%' OR up.dob LIKE '%${searchterm}%' OR up.lastname LIKE '%${searchterm}%' OR up.work_email LIKE '%${searchterm}%' OR up.phone LIKE '%${searchterm}%')`;
+        console.log(query)
+        const [rows] = await connection.query(query);
+        return res.status(200).json({
+            success: true,
+            message: "Patient data fetched successfully",
+            data: rows,
+        });
+    } catch (error) {
+        console.error("Error searching patient:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error in search patient API",
+        });
+    }
+}
 
 module.exports = {
   addPatient,
@@ -2283,5 +2302,6 @@ module.exports = {
   getPatientTimings,
   addPatientVitals,
   fetchDataByPatientId,
-  fetchDataByPatientIdForccm
+  fetchDataByPatientIdForccm,
+  searchPatient
 };
