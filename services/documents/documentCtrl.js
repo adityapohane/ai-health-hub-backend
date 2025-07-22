@@ -130,8 +130,28 @@ const documentUploadCtrl = async (req, res) => {
   }
 };
 
+const getAllDocuments = async (req, res) => {
+  try {
+    const sql = `SELECT pd.*,dt.document_type,CONCAT(up.firstname," ",up.lastname) AS patient_name FROM patient_documents pd LEFT JOIN document_types dt ON dt.document_type_id = pd.document_type_id JOIN users_mappings um ON um.user_id = pd.patient_id LEFT JOIN user_profiles up ON up.fk_userid = pd.patient_id WHERE um.fk_physician_id = ?`
+    let user_id= req.user.user_id;
+    const [types] = await connection.query(sql, [user_id]);
+    return res.status(200).json({
+      success: true,
+      message: "Document fetched successfully",
+      types
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Document cannot be uploaded. Please try again.",
+    });
+  }
+};
+
 module.exports = {
   documentTypeCtrl,
   documentUploadCtrl,
-  getDocumentsByPatientIdCtrl
+  getDocumentsByPatientIdCtrl,
+  getAllDocuments
 }

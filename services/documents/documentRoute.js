@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require('multer');
 
-const { documentTypeCtrl, documentUploadCtrl, getDocumentsByPatientIdCtrl } = require("./documentCtrl");
+const { documentTypeCtrl, documentUploadCtrl, getDocumentsByPatientIdCtrl, getAllDocuments } = require("./documentCtrl");
 
 // Configure Multer with better error handling
 const upload = multer({
@@ -24,4 +24,5 @@ const upload = multer({
 router.get("/types", documentTypeCtrl);
 router.post('/upload', documentUploadCtrl);
 router.get('/getPatientDocuments', getDocumentsByPatientIdCtrl);
+router.get('/getAllDocuments', getAllDocuments);
 module.exports = router;
