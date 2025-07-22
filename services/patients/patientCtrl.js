@@ -149,7 +149,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   prescribedBy,
   startDate,
   endDate,
-  status
+  status,
+  refills
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
     currentMedications?.map(async (medication) => {
       const values4 = [
@@ -161,6 +162,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         medication.startDate,
         medication.endDate,
         medication.status,
+        medication.refills
       ];
       const [medicationResult] = await connection.query(sql4, values4);
     });
@@ -335,7 +337,7 @@ const getPatientDataById = async (req, res) => {
 
     // Get medications
     const [currentMedications] = await connection.query(
-      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status ,id
+      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status ,id,refills
        FROM patient_medication WHERE patient_id = ? ORDER BY id DESC`,
       [patientId]
     );
@@ -703,7 +705,7 @@ if (currentMedications && currentMedications.length > 0) {
       const [result] = await connection.query(
         `UPDATE patient_medication SET
            name = ?, dosage = ?, frequency = ?, prescribedBy = ?,
-           startDate = ?, endDate = ?, status = ?
+           startDate = ?, endDate = ?, status = ?,refills=?
          WHERE id = ? AND patient_id = ?`,
         [
           med.name,
@@ -713,6 +715,7 @@ if (currentMedications && currentMedications.length > 0) {
           med.startDate,
           med.endDate,
           med.status,
+          med.refills,
           med.id,
           patientId
         ]
@@ -722,8 +725,8 @@ if (currentMedications && currentMedications.length > 0) {
       const [result] = await connection.query(
         `INSERT INTO patient_medication (
            name, dosage, frequency, prescribedBy,
-           startDate, endDate, status, patient_id
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           startDate, endDate, status,refills, patient_id
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           med.name,
           med.dosage,
@@ -732,6 +735,7 @@ if (currentMedications && currentMedications.length > 0) {
           med.startDate,
           med.endDate,
           med.status,
+          med.refills,
           patientId
         ]
       );
@@ -1556,8 +1560,9 @@ const addPatientMedication = async (req, res) => {
         prescribedBy,
         startDate,
         endDate,
-        status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+        status,
+        refills
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     const values = [
       patientId,
@@ -1568,6 +1573,7 @@ const addPatientMedication = async (req, res) => {
       startDate,
       endDate,
       status,
+      refills
     ];
 
     const [result] = await connection.execute(sql, values);
@@ -1864,7 +1870,7 @@ const fetchDataByPatientId = async (req, res) => {
 
     // Get medications
     const [currentMedications] = await connection.query(
-      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id
+      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id,refills
        FROM patient_medication
        WHERE patient_id = ?
          AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
@@ -2089,7 +2095,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     //#production
     // Get medications
     const [currentMedications] = await connection.query(
-      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id
+      `SELECT name, dosage, frequency, prescribedBy, startDate, endDate, status, id,refills
        FROM patient_medication
        WHERE patient_id = ?
          AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
