@@ -1,14 +1,15 @@
 const connection = require("./../config/db"); 
 
 const logAudit = async (req, actionType, entityType, entityId, description = '') => {
+    // console.log(req, actionType, entityType, entityId, description)
   try {
-    const userId = req.user?.id || null;
+    const userId = req.user?.user_id || null;
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const userAgent = req.headers['user-agent'] || '';
 
     if (!userId) return; // Don't log unauthenticated actions
 
-    await connection.query(
+   const [result] = connection.query(
       `INSERT INTO audit_logs (user_id, action_type, entity_type, entity_id, description, ip_address, user_agent)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [userId, actionType, entityType, entityId, description, ipAddress, userAgent]

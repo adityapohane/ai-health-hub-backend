@@ -84,7 +84,7 @@ exports.createAppointment = async (req, res) => {
     ];
 
     await db.execute(insertQuery, values);
-    logAudit(req, 'CREATE', 'APPOINTMENT', req.user.user_id, 'Appointment created successfully');
+    await logAudit(req, 'CREATE', 'APPOINTMENT', patient.id, 'Appointment created successfully');
 
     return res.status(201).json({ success: true, message: "Appointment created successfully" });
   } catch (err) {
@@ -228,7 +228,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Appointment not found" });
     }
 
-    logAudit(req, 'UPDATE', 'APPOINTMENT', req.user.user_id, `Appointment status updated to ${status}`);
+    await logAudit(req, 'UPDATE', 'APPOINTMENT', appointmentId, `Appointment status updated to ${status}`);
     res.status(200).json({ success: true, message: "Appointment status updated successfully" });
   } catch (err) {
     console.error("Update appointment status error:", err);

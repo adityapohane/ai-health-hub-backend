@@ -44,7 +44,7 @@ const createCarePlan = async (req, res) => {
       data.riskLevel
     ]);
 
-    logAudit(req, 'CREATE', 'CARE_PLAN', req.user.user_id, `Care plan created for patient ${data.patientInfo.patientName}`);
+    await logAudit(req, 'CREATE', 'CARE_PLAN',data.patientInfo.patientId, `Care plan created for patient ${data.patientInfo.patientName}`);
     res.status(201).json({success: true, message: 'Care plan saved successfully', id: result.insertId });
   } catch (error) {
     console.error('Insert error:', error);

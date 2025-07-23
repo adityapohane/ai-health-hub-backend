@@ -105,7 +105,7 @@ const documentUploadCtrl = async (req, res) => {
     }
 
     // Audit logging
-    logAudit(req, 'CREATE', 'DOCUMENT', req.user.user_id, `Document uploaded for patient ID: ${patient_id}`);
+    await logAudit(req, 'CREATE', 'DOCUMENT', patient_id, `Document uploaded for patient ID: ${patient_id}`);
 
     res.status(200).json({
       success: true,

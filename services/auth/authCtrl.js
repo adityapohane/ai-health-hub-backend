@@ -46,7 +46,8 @@ const registerCtrl = async (req, res) => {
     const [userResult] = await connection.query(insertUserProfileQuery, userValues);
 
     // Log user registration
-    logAudit(req, 'CREATE', 'USER', insertedId, `User registered with email: ${email}`);
+    req.user.user_id = insertedId;
+    await logAudit(req, 'CREATE', 'USER', insertedId, `User registered with email: ${email}`);
 
     return res.status(200).json({
       success: true,
@@ -110,9 +111,9 @@ const loginCtrl = async (req, res) => {
 
     let update1 = `UPDATE users SET user_token = ?,mfa_code = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
     const result1 = await connection.query(update1, [token,otp, user.user_id]);
-
+    req.user.user_id = user.user_id;
     // Log successful login attempt with OTP sent
-    logAudit(req, 'UPDATE', 'USER_AUTH', rows[0].user_id, `User login initiated, OTP sent to email: ${email}`);
+    await logAudit(req, 'UPDATE', 'USER_AUTH', user.user_id, `User login initiated, OTP sent to email: ${email}`);
 
     return res.status(200).json({
       success: true,
@@ -177,7 +178,7 @@ const changePasswordCtrl = async (req, res) => {
     ]);
 
     // Log password change
-    logAudit(req, 'UPDATE', 'USER_SECURITY', user_id, `User password changed successfully`);
+    await logAudit(req, 'UPDATE', 'USER_SECURITY', user_id, `User password changed successfully`);
 
     return res.status(200).json({
       success: true,
@@ -224,7 +225,8 @@ const verifyOtpCtrl = async (req, res) => {
     let user = userResult[0];
     
     // Log successful MFA verification and login
-    logAudit(req, 'UPDATE', 'USER_AUTH', user_id, `MFA verified successfully, user logged in: ${user.username}`);
+    req.user.user_id = user_id;
+    await logAudit(req, 'UPDATE', 'USER_AUTH', user_id, `MFA verified successfully, user logged in: ${user.username}`);
     
     // ✅ Send response ONLY if OTP is valid
     return res.status(200).json({
@@ -281,7 +283,8 @@ const resetPasswordTokenCtrl = async (req, res) => {
 
     // Log password reset request
     const user = rows[0];
-    logAudit(req, 'UPDATE', 'USER_SECURITY', user.user_id, `Password reset token requested for email: ${email}`);
+    req.user.user_id = user.user_id;
+    await logAudit(req, 'UPDATE', 'USER_SECURITY', user.user_id, `Password reset token requested for email: ${email}`);
 
     return res.json({
       success: true,
@@ -342,7 +345,7 @@ const resetPasswordCtrl = async (req, res) => {
     );
 
     // Log successful password reset
-    logAudit(req, 'UPDATE', 'USER_SECURITY', user.user_id, `Password reset completed using token for user: ${user.username}`);
+    await logAudit(req, 'UPDATE', 'USER_SECURITY', user.user_id, `Password reset completed using token for user: ${user.username}`);
 
     res.json({
       success: true,

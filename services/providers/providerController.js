@@ -86,7 +86,7 @@ const updateUserMapping = async (req, res) => {
 
     // Log audit for user mapping update
     try {
-      logAudit(req, 'UPDATE', 'USER_MAPPING', providerId, 'Updated user mapping for provider');
+      await logAudit(req, 'UPDATE', 'USER_MAPPING', providerId, 'Updated user mapping for provider');
     } catch (auditError) {
       console.error('Audit logging error:', auditError);
     }
@@ -155,7 +155,7 @@ const updateProviderInformation = async (req, res) => {
 
     // Log audit for provider information update
     try {
-      logAudit(req, 'UPDATE', 'PROVIDER_INFO', user_id, 'Updated provider information');
+      await logAudit(req, 'UPDATE', 'PROVIDER_INFO', user_id, 'Updated provider information');
     } catch (auditError) {
       console.error('Audit logging error:', auditError);
     }
@@ -248,7 +248,7 @@ const addPatientBillingNote =  async (req, res) => {
 
     // Log audit for billing note creation
     try {
-      logAudit(req, 'CREATE', 'BILLING_NOTE', user_id, `Added billing note for patient ID: ${patientId}`);
+      await logAudit(req, 'CREATE', 'BILLING_NOTE', patientId, `Added billing note for patient ID: ${patientId}`);
     } catch (auditError) {
       console.error('Audit logging error:', auditError);
     }
