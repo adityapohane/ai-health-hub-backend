@@ -2292,6 +2292,29 @@ const searchPatient = async (req,res)=>{
         });
     }
 }
+const getAllTasks = async (req,res)=>{
+    try {
+      if(!req.user.user_id){
+        return res.status(400).json({
+            success: false,
+            message: "User ID is required",
+        });
+      }
+        const query = `SELECT * FROM tasks LEFT JOIN users_mappings um ON um.user_id = tasks.patient_id WHERE um.fk_physician_id = ${req.user.user_id}`;
+        const [rows] = await connection.query(query);
+        return res.status(200).json({
+            success: true,
+            message: "Patient tasks fetched successfully",
+            data: rows,
+        });
+    } catch (error) {
+        console.error("Error fetching patient tasks:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error in get patient tasks API",
+        });
+    }
+}
 
 module.exports = {
   addPatient,
@@ -2318,5 +2341,6 @@ module.exports = {
   addPatientVitals,
   fetchDataByPatientId,
   fetchDataByPatientIdForccm,
-  searchPatient
+  searchPatient,
+  getAllTasks
 };

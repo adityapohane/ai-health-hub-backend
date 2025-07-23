@@ -14,15 +14,15 @@ const logAudit = async (req, actionType, entityType, entityId, description = '')
     }
 
     // Log the values we're about to insert for debugging
-    console.log('Audit log values:', {
-      userId,
-      actionType,
-      entityType,
-      entityId: entityIdToLog,
-      description,
-      ipAddress,
-      userAgent: userAgent?.substring(0, 100) // Truncate to avoid very long user agents
-    });
+    // console.log('Audit log values:', {
+    //   userId,
+    //   actionType,
+    //   entityType,
+    //   entityId: entityIdToLog,
+    //   description,
+    //   ipAddress,
+    //   userAgent: userAgent?.substring(0, 100) 
+    // });
 
     // Execute the query with proper error handling
     await connection.execute(
