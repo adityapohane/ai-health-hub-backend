@@ -28,7 +28,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
-      logAudit(req, 'CREATE', 'ENCOUNTER_TEMPLATE', user_id, `Encounter template created: ${template_name}`);
+      await logAudit(req, 'CREATE', 'ENCOUNTER_TEMPLATE', 0, `Encounter template created: ${template_name}`);
       res.status(201).json({
         success: true,
         message: 'Template created successfully',
@@ -80,7 +80,7 @@ const createEncounterTemplate =   async (req, res) => {
         [template_id]
       );
   
-      logAudit(req, 'DELETE', 'ENCOUNTER_TEMPLATE', req.user.user_id, 'Encounter template deleted');
+      await logAudit(req, 'DELETE', 'ENCOUNTER_TEMPLATE', req.user.user_id, 'Encounter template deleted');
       res.json({ success: true, message: 'Template deleted successfully' });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Failed to delete template' });
@@ -110,7 +110,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
-      logAudit(req, 'UPDATE', 'ENCOUNTER_TEMPLATE', req.user.user_id, `Encounter template updated: ${template_name}`);
+      await logAudit(req, 'UPDATE', 'ENCOUNTER_TEMPLATE', req.user.user_id, `Encounter template updated: ${template_name}`);
       res.json({success: true, message: 'Template updated successfully' });
     } catch (error) {
       res.status(500).json({success: false, error: 'Failed to update template' });
@@ -139,7 +139,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
-      logAudit(req, 'CREATE', 'ENCOUNTER', req.user.user_id, `Encounter created for patient ${patientId}`);
+      await logAudit(req, 'CREATE', 'ENCOUNTER', req.user.user_id, `Encounter created for patient ${patientId}`);
       res.status(201).json({
         success: true,
         message: 'Encounter created',
@@ -152,7 +152,7 @@ const createEncounterTemplate =   async (req, res) => {
   const getAllEncounters = async (req, res) => {
     try {
       const [rows] = await connection.query(
-        `SELECT * FROM encounters WHERE created_by = ? ORDER BY created DESC`,
+        `SELECT * FROM encounters WHERE provider_id = ? ORDER BY created DESC`,
         [req.user.user_id]
       );
       res.status(200).json({
@@ -201,7 +201,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
-      logAudit(req, 'UPDATE', 'ENCOUNTER', req.user.user_id, `Encounter updated for patient ${patientId}`);
+      await logAudit(req, 'UPDATE', 'ENCOUNTER', req.user.user_id, `Encounter updated for patient ${patientId}`);
       res.json({success: true, message: 'Encounter updated successfully' });
     } catch (error) {
       res.status(500).json({success: false, error: 'Failed to update encounter' });
@@ -215,7 +215,7 @@ const createEncounterTemplate =   async (req, res) => {
         [encounterId]
       );
       
-      logAudit(req, 'DELETE', 'ENCOUNTER', req.user.user_id, 'Encounter deleted');
+      await logAudit(req, 'DELETE', 'ENCOUNTER', req.user.user_id, 'Encounter deleted');
       res.json({ success: true, message: 'Encounter deleted successfully' });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Failed to delete encounter' });
