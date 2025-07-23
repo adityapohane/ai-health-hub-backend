@@ -11,7 +11,7 @@ router.delete('/template/delete/:template_id', deleteTemplateById);
 router.get('/get', getAllEncounters);
 router.post('/create', createEncounter);
 router.get('/get/:encounter_id', getEncounterById);
-router.post('/update/:encounter_id', updateEncounterById);
+router.post('/update/:encounterId', updateEncounterById);
 router.delete('/delete/:encounterId', deleteEncounterById);
 
 
