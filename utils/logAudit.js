@@ -33,9 +33,8 @@ const logAudit = async (req, actionType, entityType, entityId, description = '')
     );
     
   } catch (err) {
-    console.error('Audit log failed:', {
+    console.log('Audit log failed:', {
       error: err.message,
-      stack: err.stack,
       actionType,
       entityType,
       entityId: entityIdToLog,
