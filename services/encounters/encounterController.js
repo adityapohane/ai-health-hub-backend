@@ -224,7 +224,7 @@ const deleteEncounterById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Encounter not found' });
     }
 
-    await logAudit(req, 'DELETE', 'ENCOUNTER', req.user.user_id, 'Encounter deleted');
+    await logAudit(req, 'DELETE', 'ENCOUNTER', encounterId, 'Encounter deleted');
     res.json({ success: true, message: 'Encounter deleted successfully' });
   } catch (error) {
     console.error("Delete Error:", error);

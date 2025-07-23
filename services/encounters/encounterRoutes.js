@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createEncounterTemplate, getEncounterTemplates, getEncounterTemplateById, updateTemplateById, deleteTemplateById, getAllEncounters, createEncounter, getEncounterById, deleteEncounterById, updateEncounterById } = require('./encounterController');
+const { createEncounterTemplate, getEncounterTemplates, getEncounterTemplateById, updateTemplateById, deleteTemplateById, getAllEncounters, createEncounter, getEncounterById, deleteEncounterById,updateEncounterById } = require('./encounterController');
 
 
 router.post('/template/create', createEncounterTemplate);
