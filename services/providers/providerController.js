@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const connection = require("../../config/db");
+const logAudit = require("../../utils/logAudit");
 
 // Create patient
 
@@ -83,6 +84,13 @@ const updateUserMapping = async (req, res) => {
       ]);
     }
 
+    // Log audit for user mapping update
+    try {
+      logAudit(req, 'UPDATE', 'USER_MAPPING', providerId, 'Updated user mapping for provider');
+    } catch (auditError) {
+      console.error('Audit logging error:', auditError);
+    }
+
     res.status(200).json({
       success: true,
       message: "User mapping saved successfully",
@@ -143,6 +151,13 @@ const updateProviderInformation = async (req, res) => {
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success:false,message: 'User not found.' });
+    }
+
+    // Log audit for provider information update
+    try {
+      logAudit(req, 'UPDATE', 'PROVIDER_INFO', user_id, 'Updated provider information');
+    } catch (auditError) {
+      console.error('Audit logging error:', auditError);
     }
 
     return res.status(200).json({ success:true,message: 'Provider information updated successfully.' });
@@ -229,7 +244,14 @@ const addPatientBillingNote =  async (req, res) => {
       duration,
       note || 'Note Not provided'
     ];
-    await connection.query(sql, values);
+    const [result] = await connection.query(sql, values);
+
+    // Log audit for billing note creation
+    try {
+      logAudit(req, 'CREATE', 'BILLING_NOTE', user_id, `Added billing note for patient ID: ${patientId}`);
+    } catch (auditError) {
+      console.error('Audit logging error:', auditError);
+    }
 
     res.status(201).json({
       success: true,

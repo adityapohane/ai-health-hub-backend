@@ -1,5 +1,6 @@
 const connection = require("../../config/db");
 const moment = require("moment");
+const logAudit = require("../../utils/logAudit");
 
 const getAllPatients = async (req, res) => {
     try {
@@ -183,6 +184,8 @@ const updateBillingStatus = async (req, res) => {
       values.push(...idsArray);
   
       await connection.execute(sql, values);
+      
+      logAudit(req, 'UPDATE', 'BILLING', req.user.user_id, `Billing status updated to ${status} for IDs: ${billing_ids}`);
   
       return res.status(200).json({
         message: 'Billing status updated successfully',

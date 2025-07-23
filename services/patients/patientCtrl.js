@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const connection = require("../../config/db");
 const moment = require('moment');
+const logAudit = require("../../utils/logAudit");
 
 
 // Create patient
@@ -225,6 +226,7 @@ const values1 = [
       [insertedId, 4]
     );
 
+    logAudit(req, 'CREATE', 'PATIENT', req.user.user_id, `Patient created with patientId: ${insertedId} - ${firstName} ${lastName}`);
     return res.status(200).json({
       success: true,
       message: "User registered successfully",
@@ -784,8 +786,7 @@ WHERE patient_id = ${patientId} `);
       }
     }
 
-
-
+    logAudit(req, 'UPDATE', 'PATIENT', req.user.user_id, `Patient data updated: ${firstName} ${lastName}`);
     return res.status(200).json({
       success: true,
       message: "Patient data updated successfully",
@@ -1085,6 +1086,7 @@ const addPatientTask = async (req, res) => {
 
     const [result] = await connection.query(sql, values);
 
+    logAudit(req, 'CREATE', 'PATIENT_TASK', user_id, `Task created: ${title} for patient ${patientId}`);
     res.status(200).json({
       success: true,
       message: 'Task inserted successfully',
@@ -1242,6 +1244,7 @@ const editPatientTask = async (req, res) => {
       });
     }
 
+    logAudit(req, 'UPDATE', 'PATIENT_TASK', user_id, `Task updated: ${title}`);
     res.status(200).json({
       success: true,
       message: 'Task updated successfully'
@@ -1328,6 +1331,7 @@ const addPatientDiagnosis = async (req, res) => {
     ];
     const [rows] = await connection.query(sql5, values5);
 
+    logAudit(req, 'CREATE', 'PATIENT_DIAGNOSIS', user_id, `Diagnosis added: ${diagnosis}`);
     res.status(200).json({
       success: true,
       message: 'Patient diagnosis added successfully'
@@ -1388,6 +1392,7 @@ const addPatientNotes = async (req, res) => {
       [patientId, note, type, duration, user_id]
     );
 
+    logAudit(req, 'CREATE', 'PATIENT_NOTE', user_id, `Note added for patient ${patientId}`);
     res.status(200).json({
       success: true,
       message: 'Patient Notes added successfully',
@@ -1460,6 +1465,7 @@ const addPatientAllergy = async (req, res) => {
       reaction,
       patientId,
     ]);
+    logAudit(req, 'CREATE', 'PATIENT_ALLERGY', req.user.user_id, `Allergy added: ${allergen}`);
     res.status(201).json({ success: true, message: 'Allergy added', id: result.insertId });
   } catch (error) {
     res.status(500).json({ success: false, message: 'DB error', error: error.message });
@@ -1515,7 +1521,7 @@ const addPatientInsurance = async (req, res) => {
 
     const [result] = await connection.execute(sql, values);
 
-
+    logAudit(req, 'CREATE', 'PATIENT_INSURANCE', req.user.user_id, `Insurance record added: ${company}`);
     res.status(201).json({
       success: true,
       message: 'Insurance record added successfully',
@@ -1579,6 +1585,7 @@ const addPatientMedication = async (req, res) => {
 
     const [result] = await connection.execute(sql, values);
 
+    logAudit(req, 'CREATE', 'PATIENT_MEDICATION', user_id, `Medication added: ${name}`);
     res.status(201).json({
       success: true,
       message: 'Medication added successfully',
@@ -1770,6 +1777,7 @@ const addPatientVitals = async (req, res) => {
       patient_id,
     ]);
 
+    logAudit(req, 'CREATE', 'PATIENT_VITALS', req.user.user_id, `Vital signs recorded for patient ${patient_id}`);
     return res.status(201).json({
       success: true,
       message: "Vitals added successfully and user profile updated.",

@@ -1,5 +1,6 @@
 const connection = require("../../config/db");
 const moment = require("moment");
+const logAudit = require("../../utils/logAudit");
 
 const createEncounterTemplate =   async (req, res) => {
     const {
@@ -27,6 +28,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
+      logAudit(req, 'CREATE', 'ENCOUNTER_TEMPLATE', user_id, `Encounter template created: ${template_name}`);
       res.status(201).json({
         success: true,
         message: 'Template created successfully',
@@ -78,6 +80,7 @@ const createEncounterTemplate =   async (req, res) => {
         [template_id]
       );
   
+      logAudit(req, 'DELETE', 'ENCOUNTER_TEMPLATE', req.user.user_id, 'Encounter template deleted');
       res.json({ success: true, message: 'Template deleted successfully' });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Failed to delete template' });
@@ -107,6 +110,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
+      logAudit(req, 'UPDATE', 'ENCOUNTER_TEMPLATE', req.user.user_id, `Encounter template updated: ${template_name}`);
       res.json({success: true, message: 'Template updated successfully' });
     } catch (error) {
       res.status(500).json({success: false, error: 'Failed to update template' });
@@ -135,6 +139,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
+      logAudit(req, 'CREATE', 'ENCOUNTER', req.user.user_id, `Encounter created for patient ${patientId}`);
       res.status(201).json({
         success: true,
         message: 'Encounter created',
@@ -196,6 +201,7 @@ const createEncounterTemplate =   async (req, res) => {
         ]
       );
   
+      logAudit(req, 'UPDATE', 'ENCOUNTER', req.user.user_id, `Encounter updated for patient ${patientId}`);
       res.json({success: true, message: 'Encounter updated successfully' });
     } catch (error) {
       res.status(500).json({success: false, error: 'Failed to update encounter' });
@@ -208,6 +214,8 @@ const createEncounterTemplate =   async (req, res) => {
         `DELETE FROM encounters WHERE encounter_id = ?`,
         [encounterId]
       );
+      
+      logAudit(req, 'DELETE', 'ENCOUNTER', req.user.user_id, 'Encounter deleted');
       res.json({ success: true, message: 'Encounter deleted successfully' });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Failed to delete encounter' });

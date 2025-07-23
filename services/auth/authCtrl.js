@@ -4,6 +4,7 @@ const connection = require('../../config/db');
 const mailSender = require("../../utils/mailSender");
 const otpTemplate = require("../../template/emailVerificationTemplate");
 const crypto = require("crypto");
+const { logAudit } = require('../../utils/logAudit');
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -44,6 +45,8 @@ const registerCtrl = async (req, res) => {
     const userValues = [firstName, lastName, email, insertedId];
     const [userResult] = await connection.query(insertUserProfileQuery, userValues);
 
+    // Log user registration
+    logAudit(req, 'CREATE', 'USER', insertedId, `User registered with email: ${email}`);
 
     return res.status(200).json({
       success: true,
@@ -108,6 +111,9 @@ const loginCtrl = async (req, res) => {
     let update1 = `UPDATE users SET user_token = ?,mfa_code = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
     const result1 = await connection.query(update1, [token,otp, user.user_id]);
 
+    // Log successful login attempt with OTP sent
+    logAudit(req, 'UPDATE', 'USER_AUTH', rows[0].user_id, `User login initiated, OTP sent to email: ${email}`);
+
     return res.status(200).json({
       success: true,
       token,
@@ -170,6 +176,9 @@ const changePasswordCtrl = async (req, res) => {
       user_id,
     ]);
 
+    // Log password change
+    logAudit(req, 'UPDATE', 'USER_SECURITY', user_id, `User password changed successfully`);
+
     return res.status(200).json({
       success: true,
       message: "Password changed successfully.",
@@ -213,6 +222,10 @@ const verifyOtpCtrl = async (req, res) => {
     const [userResult] = await connection.query(userQuery, [user_id]);
 
     let user = userResult[0];
+    
+    // Log successful MFA verification and login
+    logAudit(req, 'UPDATE', 'USER_AUTH', user_id, `MFA verified successfully, user logged in: ${user.username}`);
+    
     // ✅ Send response ONLY if OTP is valid
     return res.status(200).json({
        success: true,
@@ -265,6 +278,10 @@ const resetPasswordTokenCtrl = async (req, res) => {
       "Password Reset",
       `Your link to reset the password: ${url}. Please click this link to continue.`
     );
+
+    // Log password reset request
+    const user = rows[0];
+    logAudit(req, 'UPDATE', 'USER_SECURITY', user.user_id, `Password reset token requested for email: ${email}`);
 
     return res.json({
       success: true,
@@ -323,6 +340,9 @@ const resetPasswordCtrl = async (req, res) => {
       "UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ?",
       [encryptedPassword, token]
     );
+
+    // Log successful password reset
+    logAudit(req, 'UPDATE', 'USER_SECURITY', user.user_id, `Password reset completed using token for user: ${user.username}`);
 
     res.json({
       success: true,

@@ -1,4 +1,5 @@
 const db = require("../../config/db");
+const logAudit = require("../../utils/logAudit");
 
 exports.createAppointment = async (req, res) => {
   try {
@@ -83,6 +84,7 @@ exports.createAppointment = async (req, res) => {
     ];
 
     await db.execute(insertQuery, values);
+    logAudit(req, 'CREATE', 'APPOINTMENT', req.user.user_id, 'Appointment created successfully');
 
     return res.status(201).json({ success: true, message: "Appointment created successfully" });
   } catch (err) {
@@ -226,6 +228,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Appointment not found" });
     }
 
+    logAudit(req, 'UPDATE', 'APPOINTMENT', req.user.user_id, `Appointment status updated to ${status}`);
     res.status(200).json({ success: true, message: "Appointment status updated successfully" });
   } catch (err) {
     console.error("Update appointment status error:", err);
