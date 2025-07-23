@@ -215,7 +215,7 @@ const createEncounterTemplate =   async (req, res) => {
         [encounterId]
       );
       
-      await logAudit(req, 'DELETE', 'ENCOUNTER', req.user.user_id, 'Encounter deleted');
+      await logAudit(req, 'DELETE', 'ENCOUNTER', encounterId, 'Encounter deleted');
       res.json({ success: true, message: 'Encounter deleted successfully' });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Failed to delete encounter' });
