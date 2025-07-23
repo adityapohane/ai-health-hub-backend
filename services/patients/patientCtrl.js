@@ -2268,7 +2268,7 @@ function calculateBilledMinutes(totalMinutes) {
 const searchPatient = async (req,res)=>{
     try {
         const {searchterm} = req.query;
-        const query = `SELECT CONCAT(up.firstname," ",up.lastname) as patient_name ,up.fk_userid as patient_id FROM user_profiles up LEFT JOIN users_mappings um ON um.user_id = up.fk_userid WHERE um.fk_role_id = 7 AND um.fk_physician_id = ${req.user.user_id} AND (up.firstname LIKE '%${searchterm}%' OR up.middlename LIKE '%${searchterm}%' OR up.dob LIKE '%${searchterm}%' OR up.lastname LIKE '%${searchterm}%' OR up.work_email LIKE '%${searchterm}%' OR up.phone LIKE '%${searchterm}%')`;
+        const query = `SELECT CONCAT(up.firstname," ",up.lastname) as patient_name ,up.fk_userid as patient_id FROM user_profiles up LEFT JOIN users_mappings um ON um.user_id = up.fk_userid WHERE um.fk_role_id = 7 AND um.fk_physician_id = ${req.user.user_id} AND (up.firstname LIKE '%${searchterm}%' OR up.middlename LIKE '%${searchterm}%' OR up.dob LIKE '%${searchterm}%' OR up.lastname LIKE '%${searchterm}%' OR up.work_email LIKE '%${searchterm}%' OR up.phone LIKE '%${searchterm}%') LIMIT 10`;
         // console.log(query)
         const [rows] = await connection.query(query);
         return res.status(200).json({
