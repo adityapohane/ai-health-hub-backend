@@ -12,7 +12,7 @@ router.get('/get', getAllEncounters);
 router.post('/create', createEncounter);
 router.get('/get/:encounter_id', getEncounterById);
 router.post('/update/:encounter_id', updateEncounterById);
-router.delete('/delete/:encounter_id', deleteEncounterById);
+router.delete('/delete/:encounterId', deleteEncounterById);
 
 
 module.exports = router;
