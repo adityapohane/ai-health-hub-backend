@@ -91,9 +91,37 @@ const getPatientDevices = async (req, res) => {
         });
     }
 };
+const listTelemetryWithRange  = async (req, res) => {
+    const { patientId } = req.params;
+    const { startTime, endTime } = req.query;
+    
+    try {
+        let deviceId = `100241200303` // change this to assigned devices
+      let url = `${BASE_URL}/v1/devices/${deviceId}/telemetry`;
+  
+      // If any time params exist, add them to URL
+      if (startTime || endTime) {
+        const queryParams = new URLSearchParams();
+        if (startTime) queryParams.append("startTime", startTime);
+        if (endTime) queryParams.append("endTime", endTime);
+        url += `?${queryParams.toString()}`;
+      }
+  
+      const response = await axios.get(url, { headers });
+  
+      res.status(200).json({ success: true, data: response.data });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Error fetching telemetry data",
+        error: error.message,
+      });
+    }
+  };
 
 module.exports = {
     getDevices,
     assignDevice,
-    getPatientDevices
+    getPatientDevices,
+    listTelemetryWithRange
 }
