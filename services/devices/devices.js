@@ -1,6 +1,8 @@
+require("dotenv").config();
 const connection = require("../../config/db");
 const moment = require("moment");
 const logAudit = require("../../utils/logAudit");
+const axios = require("axios");
 
 const getDevices = async (req, res) => {
     try {
@@ -97,6 +99,15 @@ const listTelemetryWithRange  = async (req, res) => {
     
     try {
         let deviceId = `100241200303` // change this to assigned devices
+       const BASE_URL = process.env.DEVICE_API_URL;
+       const API_KEY = process.env.MIOLABS_API_KEY;
+       
+       const headers = {
+         "Content-Type": "application/json",
+         "Accept": "application/json",
+         "x-api-key": API_KEY,
+       };
+       
       let url = `${BASE_URL}/v1/devices/${deviceId}/telemetry`;
   
       // If any time params exist, add them to URL
