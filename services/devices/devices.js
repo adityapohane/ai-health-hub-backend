@@ -5,10 +5,11 @@ const logAudit = require("../../utils/logAudit");
 const getDevices = async (req, res) => {
     try {
         const {imei} = req.query;
-        let sql = `SELECT * FROM devices`;
+        let sql = `SELECT * FROM devices WHERE device_assigned = 0`;
         if (imei) {
-            sql += ` WHERE imei LIKE '%${imei}%'`;
+            sql += ` AND imei LIKE '%${imei}%'`;
         }
+        sql += ` LIMIT 5`;
         const [rows] = await connection.query(sql);
         return res.status(200).json({
             success: true,
