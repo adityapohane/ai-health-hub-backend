@@ -19,6 +19,7 @@ const documentRoutes = require("./documents/documentRoute");
 const billingRoutes = require("./billings/billingRoutes");
 const ccmRoutes = require("./ccm/ccmRoutes");
 const encountersRoutes = require("./encounters/encounterRoutes");
+const devicesRoutes = require("./devices/devicesRoutes");
 
 
 
@@ -41,6 +42,7 @@ router.use("/documents",verifyToken, documentRoutes);
 router.use("/billing",verifyToken, billingRoutes);
 router.use("/ccm",verifyToken, ccmRoutes);
 router.use("/encounters",verifyToken, encountersRoutes);
+router.use("/devices",verifyToken, devicesRoutes);
 router.get('/health',verifyToken, (req, res) => {
     res.json({
         status: 'healthy',
