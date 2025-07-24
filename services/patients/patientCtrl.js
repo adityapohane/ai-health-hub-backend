@@ -2046,7 +2046,7 @@ const fetchDataByPatientId = async (req, res) => {
 };
 const fetchDataByPatientIdForccm = async (req, res) => {
   try {
-    const { patientId, date } = { ...req.query, ...req.params, ...req.body };
+    const { patientId, date,reportType } = { ...req.query, ...req.params, ...req.body };
     const { user_id } = req.user;
     const targetDate = date ? moment(date) : moment();
     const { startOfMonth, endOfMonth } = getMonthRange(targetDate);
@@ -2116,17 +2116,17 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     const [diagnosis] = await connection.query(
       `SELECT date, icd10, diagnosis, status, id, type
        FROM patient_diagnoses
-       WHERE patient_id = ?
+       WHERE patient_id = ? AND type = ?
          AND created_at BETWEEN ? AND ? ORDER BY id DESC`,
-      [patientId, startOfMonth, endOfMonth]
+      [patientId, reportType, startOfMonth, endOfMonth]
     );
 
     const [notes] = await connection.query(
       `SELECT note, created,duration,type, created_by, note_id
        FROM notes
-       WHERE patient_id = ?
+       WHERE patient_id = ? AND type = ?
          AND created BETWEEN ? AND ? ORDER BY note_id DESC`,
-      [patientId, startOfMonth, endOfMonth]
+      [patientId, reportType, startOfMonth, endOfMonth]
     );
     const [vitals] = await connection.query(
       `SELECT *
@@ -2138,9 +2138,9 @@ const fetchDataByPatientIdForccm = async (req, res) => {
     const [tasks] = await connection.query(
       `SELECT *
        FROM tasks
-       WHERE patient_id = ?
+       WHERE patient_id = ? AND type = ?
          AND created BETWEEN ? AND ? ORDER BY id DESC`,
-      [patientId, startOfMonth, endOfMonth]
+      [patientId, reportType, startOfMonth, endOfMonth]
     );
     const [rows] = await connection.query(`
       SELECT
@@ -2237,6 +2237,7 @@ const fetchDataByPatientIdForccm = async (req, res) => {
         diagnosis,
         vitals,
         tasks,
+        reportType
       };
       console.log(startOfMonth, endOfMonth)
       return res.status(200).json({
