@@ -160,10 +160,81 @@ console.log(startTime,endTime,date)
       });
     }
   };
+  const listTelemetryWithRange2 = async (req, res) => {
+    const { patientId } = req.params;
+    const { startTime, endTime } = req.query;
+  
+    try {
+      if (!patientId) {
+        return res.status(400).json({
+          success: false,
+          message: "PatientId is required",
+        });
+      }
+  
+      // Fetch devices assigned to patient
+      const deviceQuery = `
+        SELECT da.device_table_id, d.device_id, d.status, d.created, d.iccid, d.model_number, d.imei, d.firmware_version
+        FROM device_assign da
+        LEFT JOIN devices d ON d.id = da.device_table_id
+        WHERE da.patient_id = ?
+      `;
+      const [deviceRows] = await connection.query(deviceQuery, [patientId]);
+  
+      if (deviceRows.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: "No devices found for this patient",
+          data: [],
+        });
+      }
+  
+      const BASE_URL = process.env.DEVICE_API_URL;
+      const API_KEY = process.env.MIOLABS_API_KEY;
+      const headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-api-key": API_KEY,
+      };
+  
+      // Fetch telemetry for each device
+      for (const device of deviceRows) {
+        const deviceId = device.device_id;
+        let url = `${BASE_URL}/v1/devices/${deviceId}/telemetry`;
+  
+        if (startTime || endTime) {
+          const queryParams = new URLSearchParams();
+          if (startTime) queryParams.append("startTime", startTime);
+          if (endTime) queryParams.append("endTime", endTime);
+          url += `?${queryParams.toString()}`;
+        }
+  
+        try {
+          const response = await axios.get(url, { headers });
+          device.telemetry = response.data;
+        } catch (telemetryError) {
+          // Optionally handle telemetry error per device
+          device.telemetry = null;
+          device.telemetryError = telemetryError.message;
+        }
+      }
+  
+      res.status(200).json({
+        success: true,
+        data: deviceRows,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Error fetching telemetry data",
+        error: error.message,
+      });
+    }
+  };
 
 module.exports = {
     getDevices,
     assignDevice,
     getPatientDevices,
-    listTelemetryWithRange
+    listTelemetryWithRange2
 }
