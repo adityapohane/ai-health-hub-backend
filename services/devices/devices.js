@@ -211,10 +211,10 @@ console.log(startTime,endTime,date)
   
         try {
           const response = await axios.get(url, { headers });
-          device.telemetry = response.data;
+          device.data = response.data;
         } catch (telemetryError) {
           // Optionally handle telemetry error per device
-          device.telemetry = null;
+          device.data = null;
           device.telemetryError = telemetryError.message;
         }
       }
