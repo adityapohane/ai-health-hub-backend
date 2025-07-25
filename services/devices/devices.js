@@ -93,16 +93,46 @@ const getPatientDevices = async (req, res) => {
         });
     }
 };
+const getMonthRange = (dateStr) => {
+    const inputDate = dateStr ? new Date(dateStr) : new Date();
+  
+    if (isNaN(inputDate.getTime())) {
+      throw new Error("Invalid date format. Expected 'YYYY-MM-DD'.");
+    }
+  
+    // Start of month: YYYY-MM-01T00:00:00
+    const startTime = new Date(inputDate.getFullYear(), inputDate.getMonth(), 1, 0, 0, 0).getTime();
+  
+    // End of month: last day of month at 23:59:59
+    const endTime = new Date(inputDate.getFullYear(), inputDate.getMonth() + 1, 0, 23, 59, 59).getTime();
+  
+    return { startTime, endTime };
+  }
 const listTelemetryWithRange  = async (req, res) => {
-    const { patientId } = req.params;
-    const { startTime, endTime } = req.query;
-    
+    const { patientId,date } = {...req.params,...req.query};
+const { startTime, endTime } = getMonthRange(date);
+console.log(startTime,endTime,date)
     try {
-        let deviceId = `100241200303` // change this to assigned devices
-       const BASE_URL = process.env.DEVICE_API_URL;
-       const API_KEY = process.env.MIOLABS_API_KEY;
-       
-       const headers = {
+        if(!patientId){
+            return res.status(200).json({
+                success: true,
+                message: "PatientId is required",
+            });
+        }
+        let deviceQ = `SELECT da.device_table_id, d.device_id,d.status,d.created,d.iccid,d.model_number,d.imei,d.firmware_version FROM device_assign da left join devices d on d.id = da.device_table_id where patient_id = ?`;
+        const [deviceRows] = await connection.query(deviceQ, [patientId]);
+        if(deviceRows.length === 0){
+            return res.status(200).json({
+                success: true,
+                message: "Device not found",
+            });
+        }
+        for(const device of deviceRows){
+            let deviceId = device.device_id
+            const BASE_URL = process.env.DEVICE_API_URL;
+            const API_KEY = process.env.MIOLABS_API_KEY;
+            
+            const headers = {
          "Content-Type": "application/json",
          "Accept": "application/json",
          "x-api-key": API_KEY,
@@ -113,19 +143,20 @@ const listTelemetryWithRange  = async (req, res) => {
       // If any time params exist, add them to URL
       if (startTime || endTime) {
         const queryParams = new URLSearchParams();
-        if (startTime) queryParams.append("startTime", startTime);
-        if (endTime) queryParams.append("endTime", endTime);
-        url += `?${queryParams.toString()}`;
+        if(startTime) queryParams.append("startTime", startTime);
+        if(endTime) queryParams.append("endTime", endTime);
+
+        const urlWithParams = `${url}?${queryParams.toString()}`;
+        const response = await axios.get(urlWithParams, { headers });
+        device["telemetry"] = response.data;
       }
-  
-      const response = await axios.get(url, { headers });
-  
-      res.status(200).json({ success: true, data: response.data });
+    }
+      res.status(200).json({ success: true, data: deviceRows });
     } catch (error) {
       res.status(500).json({
         success: false,
         message: "Error fetching telemetry data",
-        error: error.message,
+        error: error    ,
       });
     }
   };
