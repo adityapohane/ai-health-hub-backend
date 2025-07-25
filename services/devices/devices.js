@@ -198,7 +198,10 @@ console.log(startTime,endTime,date)
       };
   
       // Fetch telemetry for each device
+      let i = 0;
+      let resObj ={}; 
       for (const device of deviceRows) {
+        i++;
         const deviceId = device.device_id;
         let url = `${BASE_URL}/v1/devices/${deviceId}/telemetry`;
   
@@ -211,7 +214,7 @@ console.log(startTime,endTime,date)
   
         try {
           const response = await axios.get(url, { headers });
-          device.data = response.data;
+          resObj[`item${i}`] = response.data.items;
         } catch (telemetryError) {
           // Optionally handle telemetry error per device
           device.data = null;
@@ -220,8 +223,11 @@ console.log(startTime,endTime,date)
       }
   
       res.status(200).json({
-        success: true,
-        data: deviceRows,
+        data: {
+          success: true,
+          data: resObj,
+          
+        },
       });
     } catch (error) {
       res.status(500).json({
