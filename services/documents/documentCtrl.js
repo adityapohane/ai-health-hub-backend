@@ -3,7 +3,7 @@ const moment = require('moment');
 const uploadFileToS3 = require("../../utils/s3Upload.js");
 const fs = require("fs");
 const path = require("path");
-const { logAudit } = require("../../utils/logAudit.js");
+const logAudit  = require("../../utils/logAudit.js");
 
 
 const documentTypeCtrl = async (req, res) => {

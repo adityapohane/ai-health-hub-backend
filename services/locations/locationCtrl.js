@@ -1,5 +1,5 @@
 const pool = require('../../config/db');  
-
+const logAudit = require("../../utils/logAudit");
 // Controller to create a new provider location
 const createProviderLocation = async (req, res) => {
   try {

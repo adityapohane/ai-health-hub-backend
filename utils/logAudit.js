@@ -5,13 +5,10 @@ const logAudit = async (req, actionType, entityType, entityId, description = '')
   const entityIdToLog = entityId !== undefined && entityId !== null ? entityId : 0;
   
   try {
-    const userId = req.user?.user_id || null;
+    const userId = req.user?.user_id || 0;
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const userAgent = req.headers['user-agent'] || '';
 
-    if (!userId) {
-      return;
-    }
 
     // Log the values we're about to insert for debugging
     // console.log('Audit log values:', {
