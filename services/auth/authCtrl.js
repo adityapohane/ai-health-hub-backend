@@ -46,7 +46,6 @@ const registerCtrl = async (req, res) => {
     const [userResult] = await connection.query(insertUserProfileQuery, userValues);
 
     // Log user registration
-    req.user.user_id = insertedId;
     await logAudit(req, 'CREATE', 'USER', insertedId, `User registered with email: ${email}`);
 
     return res.status(200).json({
