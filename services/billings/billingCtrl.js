@@ -248,11 +248,11 @@ const getFormInformationForCms = async (req, res) => {
       let patient = patients.length > 0 ? patients[0] : null;
 
       if(patient){
-        const inssql = `SELECT * FROM patient_insurances WHERE fk_userid = ${patientId}`;
-        const [insurance] = await connection.query(inssql);
-        const diagnosisSql = `SELECT * FROM patient_diagnoses WHERE patient_id = ${patientId}`;
+        const inssql = `SELECT * FROM patient_insurances WHERE fk_userid = ${patientId} AND insurance_type = "primary"`;
+        const [primaryInsurance] = await connection.query(inssql);
+        const diagnosisSql = `SELECT GROUP_CONCAT(icd10) AS diagnosis_codes FROM patient_diagnoses WHERE patient_id = ${patientId};`;
         const [diagnosis] = await connection.query(diagnosisSql);
-        patient.insurance = insurance;
+        patient.insurance = primaryInsurance;
         patient.diagnosis = diagnosis;
       const idsArray = String(patient.billing_ids).split(',').map(id => id.trim());
       const sql2 = `SELECT cpt_code_id,cc.code,code_units,created,cc.price from cpt_billing LEFT JOIN cpt_codes cc ON cc.id = cpt_code_id WHERE cpt_billing.id IN (${idsArray.join(",")})`
@@ -266,6 +266,48 @@ return sum + (price * units);
 
     total = parseFloat(total.toFixed(2));
     patient.totalPrice = total;
+  }
+  let diagnosisCodes = patient.diagnosis[0].diagnosis_codes;
+  let diagnosisObj = {};
+  if(diagnosisCodes){
+    diagnosisCodes = diagnosisCodes.split(",");
+    if(diagnosisCodes.length){
+      diagnosisCodes.forEach((code, index) => {
+        diagnosisObj[`diag_${index+1}`] = code;
+      });
+    }
+  }
+  patient = {...patient,...diagnosisObj};
+  let insObj={};
+  if(patient.insurance){
+    const ins = patient.insurance[0];
+    
+    if(ins["patient_relationship"] == "0"){
+      insObj["ins"] = "Self";
+      insObj.ins_addr_1 = patient.address_line || "";
+      insObj.ins_city = patient.city || "";
+      insObj.ins_state = patient.state || "";
+      insObj.ins_zip = patient.zip || "";
+      insObj.ins_name_f = patient.firstname || "";
+      insObj.ins_name_l = patient.lastname || "";
+      insObj.ins_dob = patient.dob;
+      insObj.ins_sex = patient.gender;
+      insObj.ins_number = ins.insurance_policy_number;
+      insObj.ins_group = ins.insurance_group_number;
+      insObj.pat_rel = ins.patient_relationship;
+    }else{
+      insObj.ins_addr_1 = ins.address_line || "";
+      insObj.ins_city = ins.city || "";
+      insObj.ins_state = ins.state || "";
+      insObj.ins_zip = ins.zip || "";
+      insObj.ins_name_f = ins.insured_name?.split(" ")[0] || "";
+      insObj.ins_name_l = ins.insured_name?.split(" ")[1] || "";
+      insObj.ins_dob = ins.insured_dob || "";
+      insObj.ins_sex = ins.insured_gender || "";
+      insObj.ins_number = ins.insurance_policy_number || "";
+      insObj.ins_group = ins.insurance_group_number || "";
+      insObj.pat_rel = ins.patient_relationship;
+    }
   }
   const timestamp = Date.now().toString();
   const rand = () => Math.floor(1000 + Math.random() * 9000); // 4-digit suffix
@@ -289,6 +331,7 @@ return sum + (price * units);
       units: c.code_units
     })
   }
+  // console.log(patient);
   const claimData = {
     fileid: fileid || "",
     claim: [
@@ -311,30 +354,21 @@ return sum + (price * units);
 
         claim_form: patient.claimForm || "1500",
 
-        diag_1: patient.diag1 || "",
-        diag_2: patient.diag2 || "",
-        diag_3: patient.diag3 || "",
-        diag_4: patient.diag4 || "",
+        diag_1: patient.diag_1 || "",
+        diag_2: patient.diag_2 || "",
+        diag_3: patient.diag_3 || "",
+        diag_4: patient.diag_4 || "",
         clia_number: patient.cliaNumber || "",
         employment_related: "N",
 
-        ins_addr_1: patient.insAddress || "",
-        ins_city: patient.insCity || "",
-        ins_dob: patient.dob ? moment(patient.dob).format("YYYY-MM-DD") : "",
-        ins_name_f: patient.firstname || "",
-        ins_name_l: patient.lastname || "",
-        ins_number: patient.insuranceNumber || "",
-        ins_sex: patient.gender || "",
-        ins_state: patient.insState || "",
-        ins_zip: patient.insZip || "",
-        ins_group: patient.insGroup || "",
+        // ins obj
+        ...insObj,
 
         pat_addr_1: `${patient.address_line || ""} ${patient.address_line_2 || ""}`.trim(),
         pat_city: patient.city || "",
         pat_dob: patient.dob ? moment(patient.dob).format("YYYY-MM-DD") : "",
         pat_name_f: patient.firstname || "",
         pat_name_l: patient.lastname || "",
-        pat_rel: patient.relationship || "",
         pat_sex: patient.gender || "",
         pat_state: patient.state || "",
         pat_zip: patient.zip || "",
@@ -367,7 +401,7 @@ return sum + (price * units);
       }
     ]
   };
-      // const data = generateClaimJSONFile(claimData,remote_claimid);
+      const data = generateClaimJSONFile(claimData,remote_claimid);
       // console.log(data);
       return res.status(200).json({
           success: true,
@@ -408,7 +442,16 @@ const sendForClaim = async (req, res) => {
         data: data,
     });
 };
-
+const patientEligibility = async (req, res) => {
+    const {patientId} = req.body;
+    const sql = `SELECT * FROM patient_eligibility WHERE patient_id = ${patientId}`;
+    const [data] = await connection.query(sql);
+    return res.status(200).json({
+        success: true,
+        message: "Patients fetched successfully",
+        data: data,
+    });
+};
 module.exports = {
     getAllPatients,
     updateBillingStatus,
