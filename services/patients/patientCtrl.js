@@ -120,24 +120,36 @@ const values1 = [
 
 
     const sql3 = `INSERT INTO patient_insurances (
-  insurance_policy_number,
-  insurance_group_number,
-  insurance_company,
-  insurance_plan,
-  insurance_expiry,
-  insurance_type,
-  effective_date,
-  fk_userid
-) VALUES (?, ?, ?, ?, ?, ?, ?,?);`;
+      insurance_policy_number,
+      insurance_group_number,
+      insurance_company,
+      insurance_plan,
+      insurance_relationship,
+      insurance_expiry,
+      insurance_type,
+      effective_date,
+      insured_name,
+      insured_gender,
+      insured_dob,
+      insured_address,
+      insured_phone,
+      fk_userid
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
     insurance?.map(async (insurance) => {
       const values3 = [
         insurance.policyNumber,
         insurance.groupNumber,
         insurance.company,
         insurance.plan,
+        insurance.relationship,
         insurance.expirationDate,
         insurance.type,
         insurance.effectiveDate,
+        insurance.insuredName,
+        insurance.insuredGender,
+        insurance.insuredDOB,
+        insurance.insuredAddress,
+        insurance.insuredPhone,
         insertedId,
       ];
       const [insuranceResult] = await connection.query(sql3, values3);
@@ -333,7 +345,12 @@ const getPatientDataById = async (req, res) => {
               insurance_expiry AS expirationDate,
               insurance_type AS type,
               effective_date AS effectiveDate,
-              patient_insurance_id
+              patient_insurance_id,
+              insured_name,
+              insured_gender,
+              insured_dob,
+              insured_address,
+              insured_phone
        FROM patient_insurances WHERE fk_userid = ?`,
       [patientId]
     );
