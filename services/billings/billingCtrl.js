@@ -208,9 +208,17 @@ const getFormInformationForCms = async (req, res) => {
       if(!patientId && !billing_ids){
         return res.status(400).json({ error: 'patientId and billing_ids is required' });
       }
-     
-
-                  const sql = `SELECT 
+     const sqlClaimQ = `SELECT * FROM patient_claims WHERE patient_id = ${patientId} AND billing_ids IN (${billing_ids})`;
+     const [claims] = await connection.query(sqlClaimQ);
+     if(claims.length > 0){
+      const claimData = claims[0].form_data;
+      return res.status(200).json({
+        success: true,
+        message: "Claims fetched successfully",
+        data: claimData,
+      });
+     }
+     const sql = `SELECT 
                       GROUP_CONCAT(DISTINCT cb.id ORDER BY cb.id SEPARATOR ', ') AS billing_ids,
                       cb.patient_id,
                       up.*,
@@ -450,11 +458,17 @@ const saveClaim = async (req, res) => {
   }
   const data = {
     fileid:fileid,
-    claims:[...formdata]
+    claims:[]
   }
+  if(formdata) data.claims.push(formdata);
 
+  const updateClaimQ = `UPDATE patient_claims SET form_data = ? WHERE patient_id = ? AND billing_ids IN (${billing_ids})`;
+  const [updateClaim] = await connection.query(updateClaimQ, [JSON.stringify(data), patientId, billing_ids]);
+  if(updateClaim.affectedRows > 0){
+    return res.status(200).json({ success: true, message: 'claim updated successfully' });
+  }
   try {
-    await db.query( 
+    await connection.query( 
       `INSERT INTO patient_claims (patient_id, form_data, billing_ids)
        VALUES (?, ?, ?)`,
       [patientId, JSON.stringify(data), billing_ids]
