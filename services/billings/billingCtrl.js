@@ -401,7 +401,7 @@ return sum + (price * units);
       }
     ]
   };
-      const data = generateClaimJSONFile(claimData,remote_claimid);
+      
       // console.log(data);
       return res.status(200).json({
           success: true,
@@ -442,21 +442,36 @@ const sendForClaim = async (req, res) => {
         data: data,
     });
 };
-const patientEligibility = async (req, res) => {
-    const {patientId} = req.body;
-    const sql = `SELECT * FROM patient_eligibility WHERE patient_id = ${patientId}`;
-    const [data] = await connection.query(sql);
-    return res.status(200).json({
-        success: true,
-        message: "Patients fetched successfully",
-        data: data,
-    });
+const saveClaim = async (req, res) => {
+  const { patientId, formdata, billing_ids,fileid } = req.body;
+
+  if (!patientId || !formdata || typeof billing_ids !== 'string' || !fileid) {
+    return res.status(400).json({ error: 'Missing or invalid data.' });
+  }
+  const data = {
+    fileid:fileid,
+    claims:[...formdata]
+  }
+
+  try {
+    await db.query( 
+      `INSERT INTO patient_claims (patient_id, form_data, billing_ids)
+       VALUES (?, ?, ?)`,
+      [patientId, JSON.stringify(data), billing_ids]
+    );
+
+    res.status(201).json({ success: true, message: 'claim saved successfully' });
+  } catch (err) {
+    console.error('Error inserting claim:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 module.exports = {
     getAllPatients,
     updateBillingStatus,
     getFormInformationForCms,
-    sendForClaim
+    sendForClaim,
+    saveClaim
 }
 
 
