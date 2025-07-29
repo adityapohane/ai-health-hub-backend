@@ -290,7 +290,7 @@ return sum + (price * units);
   if(patient.insurance){
     const ins = patient.insurance[0];
     
-    if(ins["patient_relationship"] == "0"){
+    if(ins?.patient_relationship == "0"){
       insObj["ins"] = "Self";
       insObj.ins_addr_1 = patient.address_line || "";
       insObj.ins_city = patient.city || "";
@@ -304,17 +304,17 @@ return sum + (price * units);
       insObj.ins_group = ins.insurance_group_number;
       insObj.pat_rel = ins.patient_relationship;
     }else{
-      insObj.ins_addr_1 = ins.address_line || "";
-      insObj.ins_city = ins.city || "";
-      insObj.ins_state = ins.state || "";
-      insObj.ins_zip = ins.zip || "";
-      insObj.ins_name_f = ins.insured_name?.split(" ")[0] || "";
-      insObj.ins_name_l = ins.insured_name?.split(" ")[1] || "";
-      insObj.ins_dob = ins.insured_dob || "";
-      insObj.ins_sex = ins.insured_gender || "";
-      insObj.ins_number = ins.insurance_policy_number || "";
-      insObj.ins_group = ins.insurance_group_number || "";
-      insObj.pat_rel = ins.patient_relationship;
+      insObj.ins_addr_1 = ins?.address_line || "";
+      insObj.ins_city = ins?.city || "";
+      insObj.ins_state = ins?.state || "";
+      insObj.ins_zip = ins?.zip || "";
+      insObj.ins_name_f = ins?.insured_name?.split(" ")[0] || "";
+      insObj.ins_name_l = ins?.insured_name?.split(" ")[1] || "";
+      insObj.ins_dob = ins?.insured_dob || "";
+      insObj.ins_sex = ins?.insured_gender || "";
+      insObj.ins_number = ins?.insurance_policy_number || "";
+      insObj.ins_group = ins?.insurance_group_number || "";
+      insObj.pat_rel = ins?.patient_relationship;
     }
   }
   const timestamp = Date.now().toString();
@@ -458,9 +458,9 @@ const saveClaim = async (req, res) => {
   }
   const data = {
     fileid:fileid,
-    claims:[]
+    claim:[]
   }
-  if(formdata) data.claims.push(formdata);
+  if(formdata) data.claim.push(formdata);
 
   const updateClaimQ = `UPDATE patient_claims SET form_data = ? WHERE patient_id = ? AND billing_ids IN (${billing_ids})`;
   const [updateClaim] = await connection.query(updateClaimQ, [JSON.stringify(data), patientId, billing_ids]);
