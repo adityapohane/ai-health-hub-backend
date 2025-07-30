@@ -31,19 +31,20 @@ router.use('/aws', awsRoute);
 
 // Protected routes (require auth)
 router.use('/patient', verifyToken, patientRoutes);
+router.use('/intake', require("../routes/intakeRoute"));
 router.use('/settings', verifyToken, settingsRoutes);
 router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
 router.use('/location', verifyToken, locationRoute);
 router.use('/work-flow', verifyToken, workFlowRoutes);
 router.use('/mio', mioRoutes);
-router.use("/twilio",verifyToken, twilioRoutes);
-router.use("/documents",verifyToken, documentRoutes);
-router.use("/billing",verifyToken, billingRoutes);
-router.use("/ccm",verifyToken, ccmRoutes);
-router.use("/encounters",verifyToken, encountersRoutes);
-router.use("/devices",verifyToken, devicesRoutes);
-router.get('/health',verifyToken, (req, res) => {
+router.use("/twilio", verifyToken, twilioRoutes);
+router.use("/documents", verifyToken, documentRoutes);
+router.use("/billing", verifyToken, billingRoutes);
+router.use("/ccm", verifyToken, ccmRoutes);
+router.use("/encounters", verifyToken, encountersRoutes);
+router.use("/devices", verifyToken, devicesRoutes);
+router.get('/health', verifyToken, (req, res) => {
     res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
