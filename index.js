@@ -12,7 +12,7 @@ const http = require("http")
 const mysql = require("mysql2/promise")
 const { setupSocketIO } = require("./config/socketio")
 const rateLimit = require('express-rate-limit');
-
+const path = require("path");
 dotenv.config()
 
 const PORT = process.env.PORT || 3000
@@ -60,6 +60,7 @@ const limiter = rateLimit({
 
 cloudinaryConnect()
 
+app.use(express.static(path.join(__dirname, 'public')));
 // Routes
 const apiRoutes = require("./services/index")
 app.use("/api/v1", apiRoutes)

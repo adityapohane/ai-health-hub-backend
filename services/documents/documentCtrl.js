@@ -84,7 +84,7 @@ const documentUploadCtrl = async (req, res) => {
     }
 
     const tempPath = file.tempFilePath;
-    const fileName = `${patient_id}/${Date.now()}_${file.name}`;
+    const fileName = `documents/${Date.now()}_${file.name}`;
 
     // Upload to S3 from temp path
     const s3Response = await uploadFileToS3(tempPath, process.env.BUCKET_NAME, fileName);

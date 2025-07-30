@@ -8,7 +8,9 @@ const {
       getPatientMonitoringData,
       getPatientByPhoneNumber,
       getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId, getCcmByPatientId, addPatientDiagnosis, getPatientDiagnosis, addPatientNotes, getPatientNotes, getUpcomingAndOverdueTasks, addPatientAllergy, addPatientInsurance, addPatientMedication, getPatientTimings, 
-      addPatientVitals, fetchDataByPatientId, fetchDataByPatientIdForccm,searchPatient,getAllTasks} = require("./patientCtrl")
+      addPatientVitals, fetchDataByPatientId, fetchDataByPatientIdForccm,searchPatient,getAllTasks} = require("./patientCtrl");
+
+const { sendConsentEmail } = require("./patientCtrl2");
 
 
 router.post("/create", addPatient);
@@ -38,4 +40,5 @@ router.get("/:patientId/summary", fetchDataByPatientId);
 router.get("/:patientId/summary/ccm", fetchDataByPatientIdForccm);
 router.get("/searchPatient",searchPatient)
 router.get("/getAllTasks", getAllTasks);
+router.post("/sendConsentEmail", sendConsentEmail);
 module.exports = router
