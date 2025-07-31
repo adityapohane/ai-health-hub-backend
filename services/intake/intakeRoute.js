@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const sendIntake = require("../controllers/intakeForm"); // adjust path as needed
+const sendIntake = require("./intakeForm"); // adjust path as needed
 
 router.post("/send", sendIntake);
 

@@ -1,4 +1,4 @@
-const mailSender = require("../utils/mailSender");
+const mailSender = require("../../utils/mailSender");
 
 const sendIntake = async (req, res) => {
     try {

@@ -32,7 +32,7 @@ router.use('/aws', awsRoute);
 
 // Protected routes (require auth)
 router.use('/patient', verifyToken, patientRoutes);
-router.use('/intake', require("../routes/intakeRoute"));
+router.use('/intake', require("./intake/intakeRoute"));
 router.use('/settings', verifyToken, settingsRoutes);
 router.use('/physician', verifyToken, providerRoutes);
 router.use('/appointment', verifyToken, appointmentRoutes);
