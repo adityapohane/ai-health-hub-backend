@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const { default: axios } = require("axios")
-
 // Import all route files
 const authRoutes = require('./auth/authRoute');
 const patientRoutes = require('./patients/patientRoute');
@@ -21,6 +20,7 @@ const ccmRoutes = require("./ccm/ccmRoutes");
 const encountersRoutes = require("./encounters/encounterRoutes");
 const devicesRoutes = require("./devices/devicesRoutes");
 const { getConsentForm, submitConsentForm } = require("./patients/patientCtrl2");
+const thirdPartyApiRoutes = require("./third-party-apis/api-routes");
 
 
 
@@ -47,6 +47,9 @@ router.use("/encounters",verifyToken, encountersRoutes);
 router.use("/devices",verifyToken, devicesRoutes);
 router.get("/ehr/consent-form", getConsentForm);
 router.post('/ehr/consent-form', submitConsentForm);
+//for third Party APIs !IMPORTANT
+router.use("/client",thirdPartyApiRoutes);
+//for Testing
 router.get('/health',verifyToken, (req, res) => {
     res.json({
         status: 'healthy',
