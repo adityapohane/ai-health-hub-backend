@@ -50,15 +50,6 @@ router.post('/ehr/consent-form', submitConsentForm);
 //for third Party APIs !IMPORTANT
 router.use("/client",thirdPartyApiRoutes);
 //for Testing
-router.get('/health',verifyToken, (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: process.env.NODE_ENV || 'development',
-        message: 'Server is running and responding'
-    });
-});
 
 
 

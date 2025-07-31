@@ -2335,6 +2335,146 @@ const getAllTasks = async (req,res)=>{
     }
 }
 
+const assignBedToPatient = async (req, res) => {
+  const { patientId, bedNo, wardNo, roomType } = req.body;
+  const assigned_by = req.user.user_id;
+
+  try {
+    // 1. Check if patient already has any active bed
+    const [[existingAssignment]] = await connection.query(
+      `SELECT id FROM bed_assignments WHERE patient_id = ? AND status = 1`,
+      [patientId]
+    );
+
+    if (existingAssignment) {
+      return res.status(400).json({
+        success: false,
+        message: "Patient already has a bed assigned.",
+      });
+    }
+
+    // 2. Check if the bed is already assigned to any patient
+    const [[bedInUse]] = await connection.query(
+      `SELECT id FROM bed_assignments 
+       WHERE bed_no = ? AND ward_no = ? AND room_type = ? AND status = 1`,
+      [bedNo, wardNo, roomType]
+    );
+
+    if (bedInUse) {
+      return res.status(400).json({
+        success: false,
+        message: "This bed is already assigned to another patient.",
+      });
+    }
+
+    // 3. Assign the bed to the patient
+    await connection.query(
+      `INSERT INTO bed_assignments 
+       (patient_id, bed_no, ward_no, room_type, assigned_by, status) 
+       VALUES (?, ?, ?, ?, ?, 1)`,
+      [patientId, bedNo, wardNo, roomType, assigned_by]
+    );
+
+    return res.json({
+      success: true,
+      message: "Bed assigned successfully.",
+    });
+
+  } catch (error) {
+    console.error("Error assigning bed:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while assigning the bed.",
+    });
+  }
+};
+const unassignBedFromPatient = async (req, res) => {
+  const { patientId } = req.body;
+  const unassigned_by = req.user.user_id;
+
+  try {
+    // 1. Check if patient has a currently assigned bed
+    const [[assignment]] = await connection.query(
+      `SELECT * FROM bed_assignments 
+       WHERE patient_id = ? AND status = 1 
+       ORDER BY assigned_at DESC LIMIT 1`,
+      [patientId]
+    );
+
+    if (!assignment) {
+      return res.status(400).json({
+        success: false,
+        message: "No active bed assigned to this patient.",
+      });
+    }
+
+    // 2. Unassign the bed
+    await connection.query(
+      `UPDATE bed_assignments 
+       SET status = 2, unassigned_by = ?, unassigned_at = NOW()
+       WHERE id = ?`,
+      [unassigned_by, assignment.id]
+    );
+
+    res.json({
+      success: true,
+      message: "Bed unassigned successfully.",
+    });
+
+  } catch (error) {
+    console.error("Error unassigning bed:", error);
+    res.status(500).json({ success: false, message: "Something went wrong." });
+  }
+};
+const getAllBeds = async (req, res) => {
+  try {
+    // console.log(req.user)
+    const userId = req.user.user_id;
+    const {patientId,status} = {...req.query, ...req.body};
+    
+    let sql = `SELECT 
+  ba.id AS assignmentId,
+  ba.patient_id AS patientId,
+  CONCAT(up.firstname, ' ', up.middlename, ' ', up.lastname) AS patientName,
+  up.gender,
+  up.dob AS birthDate,
+  up.phone,
+  up.work_email AS email,
+  ba.bed_no AS bedNo,
+  ba.ward_no AS wardNo,
+  ba.room_type AS roomType,
+  ba.assigned_at AS assignedAt,
+  up.address_line AS address,
+  CASE ba.status
+    WHEN 1 THEN 'Assigned'
+    WHEN 2 THEN 'Unassigned'
+    ELSE 'Available'
+  END AS bedStatus
+FROM bed_assignments ba
+LEFT JOIN user_profiles up ON up.fk_userid = ba.patient_id
+LEFT JOIN users_mappings um ON um.user_id = up.fk_userid 
+WHERE um.fk_physician_id = ${userId}`;
+    if(patientId){
+      sql += ` AND ba.patient_id = ${patientId}`;
+    }
+    if(status){
+      sql += ` AND ba.status = ${status}`;
+    }
+    const [rows] = await connection.query(sql);
+    return res.json({
+      success: true,
+      message: "Beds fetched successfully.",
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Error fetching beds:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong.",
+    });
+  }
+};
+
 module.exports = {
   addPatient,
   getPatientDataById,
@@ -2361,5 +2501,8 @@ module.exports = {
   fetchDataByPatientId,
   fetchDataByPatientIdForccm,
   searchPatient,
-  getAllTasks
+  getAllTasks,
+  assignBedToPatient,
+  unassignBedFromPatient,
+  getAllBeds,
 };
