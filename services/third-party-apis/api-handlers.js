@@ -91,7 +91,7 @@ const generateAccessToken = async (req, res) => {
         'UPDATE oauth_clients SET access_token = ? WHERE client_id = ?',
         [token, clientId]
       );
-  
+      await logAudit(req, 'UPDATE', 'ACCESS_TOKEN', clients[0].user_id, `GENERATED NEW ACCESS TOKEN: ${clients[0].user_id} - ${users[0].username}`);
       return res.status(200).json({
         access_token: token,
         token_type: 'Bearer',

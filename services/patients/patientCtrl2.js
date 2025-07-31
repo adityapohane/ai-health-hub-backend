@@ -91,6 +91,7 @@ const sendConsentEmail = async (req, res) => {
       "Secure Document: Patient Consent Form for Your Approval",
       htmlContent
     );
+    await logAudit(req, 'EMAIL_SENT', 'PATIENT_CONSENT', values.patientId, `SENT CONSENT FORM: ${values.patientId} - ${email}`);
     return res.status(200).json({
       success: true,
       message: "Email sent successfully",
@@ -266,6 +267,7 @@ const submitConsentForm = async (req, res) => {
       `UPDATE patient_consent SET status = 1, received = CURRENT_TIMESTAMP,s3_bucket_url_rpm = ? WHERE consent_token = ?`,
       [s3Url, token]
     );
+    await logAudit(req, 'PDF_GENERATED', 'PATIENT_CONSENT', values.patientId, `SUBMITTED CONSENT FORM: ${values.patientId} - ${email}`);
     return res.status(200).json({
       success: true,
       message: "Consent form submitted and PDF saved successfully",
