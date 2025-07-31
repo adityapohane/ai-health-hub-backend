@@ -5,12 +5,12 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const registerUser = async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { username, password } = req.body;
   
       // Check if user already exists
       const [existingUsers] = await connection.query(
         'SELECT user_id FROM users WHERE username = ? LIMIT 1',
-        [email]
+        [username]
       );
   
       if (existingUsers.length > 0) {
@@ -25,7 +25,7 @@ const registerUser = async (req, res) => {
         INSERT INTO users (username, password, fk_roleid)
         VALUES (?, ?, 20)
       `;
-      const [userResult] = await connection.query(insertUserSQL, [email, hashedPassword]); 
+      const [userResult] = await connection.query(insertUserSQL, [username, hashedPassword]); 
       const userId = userResult.insertId;
   
       // Generate client credentials
@@ -38,9 +38,10 @@ const registerUser = async (req, res) => {
         VALUES (?, ?, ?)
       `;
       await connection.query(insertClientSQL, [userId, client_id, client_secret]);
-      await logAudit(req, 'CREATE', 'USER', userId, `API CLIENT Registered: ${userId} - ${email}`);
+      await logAudit(req, 'CREATE', 'USER', userId, `API CLIENT Registered: ${userId} - ${username}`);
       return res.status(201).json({
         message: 'User registered successfully',
+        note: 'Please Store the client_id and client_secret And use it for generating access token',
         clientId:client_id,
         clientSecret:client_secret
       });
