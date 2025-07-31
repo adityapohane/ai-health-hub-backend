@@ -2444,7 +2444,6 @@ const getAllBeds = async (req, res) => {
   ba.ward_no AS wardNo,
   ba.room_type AS roomType,
   ba.assigned_at AS assignedAt,
-  up.address_line AS address,
   CASE ba.status
     WHEN 1 THEN 'Assigned'
     WHEN 2 THEN 'Unassigned'
