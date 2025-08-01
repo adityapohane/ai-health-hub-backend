@@ -190,6 +190,7 @@ const submitConsentForm = async (req, res) => {
   try {
     const values = { ...req.body, ...req.query };
     const { token, htmlContent } = values;
+    // console.log(values)
 
     if (!token || !htmlContent) {
       return res.status(400).json({
@@ -631,7 +632,28 @@ const getHTMLConsent = (values) => {
                 .join("")}
             </div>
           </div>
-  
+          
+                  <!-- Signature Section -->
+          <div class="section-card">
+            <div class="section-header">
+              <div class="section-title">✍️ Patient Signature</div>
+              <div class="section-description">Please sign below to confirm your consent</div>
+            </div>
+            <div class="section-content">
+              <div style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; background: #f8fafc;">
+                <canvas id="signature-pad"
+  style="width: 100%; height: 200px; border: 2px dashed #94a3b8; border-radius: 8px; background: white; touch-action: none;"></canvas>
+                <div style="text-align: right; margin-top: 10px;">
+                  <button type="button" id="clear-signature"
+                    style="padding: 6px 12px; border: none; background-color: #ef4444; color: white; border-radius: 6px; cursor: pointer;">Clear</button>
+                </div>
+                <input type="hidden" name="signatureData" id="signatureData" />
+              </div>
+            </div>
+          </div>
+          <div id="signature-container">
+  <img id="signature-image" src="" style="max-width: 300px; border: 1px solid #ccc; margin-top: 10px;" />
+</div>
           <!-- Submit -->
           <div class="submit-section" style="text-align:center; padding:30px;">
             <button type="submit" class="submit-button">
@@ -656,7 +678,10 @@ const getHTMLConsent = (values) => {
     </div>
     </div>
 
-    <script src="/js/consent-form.js"></script>
+<script src="/js/libs/signature_pad.umd.min.js"></script>
+<script src="/js/consent-form.js"></script>
+
+
   </body>
   </html>
   `;

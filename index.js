@@ -21,7 +21,8 @@ app.use(helmet())
 app.use(morgan("dev"))
 app.use(express.json())
 app.use(cookieParser())
-app.use(bodyParser.json())
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 const server = http.createServer(app)
 

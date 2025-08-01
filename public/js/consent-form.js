@@ -1,177 +1,137 @@
 window.onload = function () {
-    var form = document.getElementById('consentForm');
-  
-    form.onsubmit = function () {
-      if (validateConsentForm()) {
-        submitConsentForm();
-      }
+  const form = document.getElementById('consentForm');
+  const canvas = document.getElementById('signature-pad');
+  const clearButton = document.getElementById('clear-signature');
+
+  // Resize canvas then initialize SignaturePad
+  resizeCanvas(canvas);
+  const signaturePad = new SignaturePad(canvas, {
+    backgroundColor: 'white',
+    penColor: 'black',
+  });
+
+  // Redraw signature on window resize
+  window.addEventListener("resize", () => {
+    const data = signaturePad.toData();
+    resizeCanvas(canvas);
+    signaturePad.clear();
+    signaturePad.fromData(data);
+  });
+
+  // Clear signature
+  clearButton.addEventListener('click', () => {
+    signaturePad.clear();
+  });
+
+  // Handle form submission
+  form.onsubmit = function () {
+    if (!validateConsentForm()) return false;
+
+    if (signaturePad.isEmpty()) {
+      alert('Please sign the form before submitting.');
       return false;
-    };
-  };
-  
-  function validateConsentForm() {
-    var checkboxes = document.querySelectorAll('input[type="checkbox"][required]');
-    var allChecked = true;
-  
-    for (var i = 0; i < checkboxes.length; i++) {
-      if (!checkboxes[i].checked) {
-        checkboxes[i].style.outline = '2px solid #ef4444';
-        allChecked = false;
-      } else {
-        checkboxes[i].style.outline = 'none';
-      }
     }
-  
-    if (!allChecked) {
-      alert('Please check all required consent boxes.');
-    }
-  
-    return allChecked;
-  }
-  
-  function getTokenFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('token');
-  }
-  function submitConsentForm() {
-    var form = document.getElementById('consentForm');
-    var formData = new FormData(form);
-    var data = {};
-  
-    formData.forEach(function (value, key) {
-      data[key] = value;
-    });
-  
-    const token = getTokenFromURL();
-    if (!token) {
-      alert('The Given Link is expired or invalid');
-      return;
-    }
-    data.token = token;
-  
-    // ✅ Set checked attributes for checkboxes
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(cb => {
+
+    // ✅ Convert canvas to image and replace it inline (same position)
+    const signatureImage = signaturePad.toDataURL('image/png');
+    const img = document.createElement('img');
+    img.src = signatureImage;
+    img.style.cssText = canvas.style.cssText;
+    img.width = canvas.width / window.devicePixelRatio;
+    img.height = canvas.height / window.devicePixelRatio;
+    img.id = canvas.id;
+
+    // Replace canvas with image in DOM
+    canvas.parentNode.replaceChild(img, canvas);
+
+    // ✅ Set checkbox 'checked' attributes for PDF capture
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
       if (cb.checked) {
         cb.setAttribute('checked', 'checked');
       } else {
         cb.removeAttribute('checked');
       }
     });
-  
-    // ✅ Get final HTML snapshot
-    data.htmlContent = document.documentElement.outerHTML;
-  
-    fetch('/api/v1/ehr/consent-form', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-      .then(function (response) {
-        if (response.ok) {
-          alert('Consent Form Submitted Successfully!');
-  
-          // ✅ Disable and change button text
-          const submitButton = form.querySelector('button[type="submit"]');
-          if (submitButton) {
-            submitButton.textContent = 'Submitted';
-            submitButton.disabled = true;
-          }
-  
-        } else {
-          alert('There was an error submitting the form.');
-        }
-      })
-      .catch(function (error) {
-        console.error('Error:', error);
-        alert('Submission failed. Please try again.');
-      });
+
+    // Allow DOM to update before capturing HTML
+    setTimeout(() => {
+      submitConsentForm();
+    }, 200);
+
+    return false;
+  };
+};
+
+// Validate that required checkboxes are ticked
+function validateConsentForm() {
+  const checkboxes = document.querySelectorAll('input[type="checkbox"][required]');
+  let allChecked = true;
+
+  checkboxes.forEach(cb => {
+    if (!cb.checked) {
+      cb.style.outline = '2px solid #ef4444';
+      allChecked = false;
+    } else {
+      cb.style.outline = 'none';
+    }
+  });
+
+  if (!allChecked) {
+    alert('Please check all required consent boxes.');
   }
-  // function submitConsentForm2() {
-  //   var form = document.getElementById('consentForm');
-  //   var formData = new FormData(form);
-  //   var data = {};
-  
-  //   formData.forEach(function (value, key) {
-  //     data[key] = value;
-  //   });
-  
-  //   const token = getTokenFromURL();
-  //   if (!token) {
-  //     alert('The Given Link is expired or invalid');
-  //     return;
-  //   }
-  //   data.token = token;
-  
-  //   // ✅ Inject `checked` into the actual HTML elements
-  //   const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-  //   checkboxes.forEach(cb => {
-  //     if (cb.checked) {
-  //       cb.setAttribute('checked', 'checked');
-  //     } else {
-  //       cb.removeAttribute('checked');
-  //     }
-  //   });
-  
-  //   // ✅ Now capture the HTML with checkboxes as checked
-  //   data.htmlContent = document.documentElement.outerHTML;
-  
-  //   fetch('/api/v1/ehr/consent-form', {
-  //     method: 'POST',
-  //     headers: {
-  //       'Content-Type': 'application/json',
-  //     },
-  //     body: JSON.stringify(data),
-  //   })
-  //     .then(function (response) {
-  //       if (response.ok) {
-  //         alert('Consent Form Submitted Successfully!');
-  //       } else {
-  //         alert('There was an error submitting the form.');
-  //       }
-  //     })
-  //     .catch(function (error) {
-  //       console.error('Error:', error);
-  //       alert('Submission failed. Please try again.');
-  //     });
-  // }//working
-  // function submitConsentForm() {
-  //   var form = document.getElementById('consentForm');
-  //   var formData = new FormData(form);
-  //   var data = {};
-  
-  //   formData.forEach(function (value, key) {
-  //     data[key] = value;
-  //   });
-  
-  //   // ➕ Add token from query string to the body
-  //   const token = getTokenFromURL();
-  //   if (token) {
-  //     data.token = token;
-  //   }else{
-  //       alert('The Given Link is expired or invalid');
-  //       return;
-  //   }
-  //   data.htmlContent = document.documentElement.outerHTML;
-  //   fetch('/api/v1/ehr/consent-form', {
-  //     method: 'POST',
-  //     headers: {
-  //       'Content-Type': 'application/json',
-  //     },
-  //     body: JSON.stringify(data),
-  //   })
-  //     .then(function (response) {
-  //       if (response.ok) {
-  //         alert('Consent Form Submitted Successfully!');
-  //       } else {
-  //         alert('There was an error submitting the form.');
-  //       }
-  //     })
-  //     .catch(function (error) {
-  //       console.error('Error:', error);
-  //       alert('Submission failed. Please try again.');
-  //     });
-  // }
-  
+
+  return allChecked;
+}
+
+// Extract token from URL
+function getTokenFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('token');
+}
+
+// Submit form via fetch
+function submitConsentForm() {
+  const token = getTokenFromURL();
+  if (!token) {
+    alert('The Given Link is expired or invalid');
+    return;
+  }
+
+  const data = {
+    token,
+    htmlContent: document.documentElement.outerHTML
+  };
+
+  fetch('/api/v1/ehr/consent-form', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+    .then(response => {
+      if (response.ok) {
+        alert('Consent Form Submitted Successfully!');
+        const submitButton = document.querySelector('#consentForm button[type="submit"]');
+        if (submitButton) {
+          submitButton.textContent = 'Submitted';
+          submitButton.disabled = true;
+        }
+      } else {
+        alert('There was an error submitting the form.');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Submission failed. Please try again.');
+    });
+}
+
+// Resize canvas for high-DPI screens
+function resizeCanvas(canvas) {
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  canvas.width = canvas.offsetWidth * ratio;
+  canvas.height = canvas.offsetHeight * ratio;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(ratio, ratio);
+}
