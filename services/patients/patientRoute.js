@@ -8,7 +8,7 @@ const {
       getPatientMonitoringData,
       getPatientByPhoneNumber,
       getPatientTaskDetails, addPatientTask, getAllPatientTasks, editPatientTask, getPcmByPatientId, getCcmByPatientId, addPatientDiagnosis, getPatientDiagnosis, addPatientNotes, getPatientNotes, getUpcomingAndOverdueTasks, addPatientAllergy, addPatientInsurance, addPatientMedication, getPatientTimings, 
-      addPatientVitals, fetchDataByPatientId, fetchDataByPatientIdForccm,searchPatient,getAllTasks,getAllBeds,unassignBedFromPatient,assignBedToPatient} = require("./patientCtrl");
+      addPatientVitals, fetchDataByPatientId, fetchDataByPatientIdForccm,searchPatient,getAllTasks,getAllBeds,unassignBedFromPatient,assignBedToPatient,getAllConsents} = require("./patientCtrl");
 
 const { sendConsentEmail } = require("./patientCtrl2");
 
@@ -40,10 +40,13 @@ router.get("/:patientId/summary", fetchDataByPatientId);
 router.get("/:patientId/summary/ccm", fetchDataByPatientIdForccm);
 router.get("/searchPatient",searchPatient)
 router.get("/getAllTasks", getAllTasks);
-router.post("/sendConsentEmail", sendConsentEmail);
+router.get("/sendConsentEmail", sendConsentEmail);
 
 //beds
 router.get("/getAllBeds", getAllBeds);
 router.post("/assignBedToPatient", assignBedToPatient);
 router.post("/unassignBedFromPatient", unassignBedFromPatient);
+
+//consents
+router.get("/getAllConsents", getAllConsents);
 module.exports = router

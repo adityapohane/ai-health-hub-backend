@@ -2473,6 +2473,48 @@ WHERE um.fk_physician_id = ${userId}`;
     });
   }
 };
+const getAllConsents = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const { patientId } = { ...req.query, ...req.body };
+
+    let sql = `
+      SELECT 
+        pc.*,
+        CONCAT(up.firstname, ' ', up.middlename, ' ', up.lastname) AS patientName,
+        up.gender,
+        up.dob,
+        up.phone,
+        up.work_email as email,
+        if(pc.status = 1, 'Received', 'Not Received') AS status
+      FROM patient_consent pc
+      LEFT JOIN user_profiles up ON up.fk_userid = pc.patient_id
+      LEFT JOIN users_mappings um ON um.user_id = pc.patient_id
+      WHERE um.fk_physician_id = ${userId}
+    `;
+
+    if (patientId) {
+      sql += ` AND pc.patient_id = ${patientId}`;
+    }
+
+    sql += ` ORDER BY pc.created DESC`;
+
+    const [rows] = await connection.query(sql);
+
+    return res.json({
+      success: true,
+      message: "Consents fetched successfully.",
+      data: rows,
+    });
+
+  } catch (error) {
+    console.error("Error fetching consents:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching consents.",
+    });
+  }
+};
 
 module.exports = {
   addPatient,
@@ -2504,4 +2546,5 @@ module.exports = {
   assignBedToPatient,
   unassignBedFromPatient,
   getAllBeds,
+  getAllConsents,
 };
