@@ -86,7 +86,7 @@ const sendConsentEmail = async (req, res) => {
   const [result] = await connection.query(sql1, [values.patientId, token, url]);
   // const htmlContent = getHTMLConsent(emailvalues);
   if (email) {
-    email = "adityapohane3989@gmail.com";
+    // email = "adityapohane3989@gmail.com"; //testing
     mailSender(
       email,
       "Secure Document: Patient Consent Form for Your Approval",

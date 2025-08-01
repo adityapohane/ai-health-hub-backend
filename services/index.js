@@ -21,6 +21,7 @@ const encountersRoutes = require("./encounters/encounterRoutes");
 const devicesRoutes = require("./devices/devicesRoutes");
 const { getConsentForm, submitConsentForm } = require("./patients/patientCtrl2");
 const thirdPartyApiRoutes = require("./third-party-apis/api-routes");
+const generalRoutes = require("./general-apis/generalRoutes");
 
 
 
@@ -50,6 +51,7 @@ router.post('/ehr/consent-form', submitConsentForm);
 //for third Party APIs !IMPORTANT
 router.use("/client",thirdPartyApiRoutes);
 //for Testing
+router.use("/general",generalRoutes);
 
 
 
