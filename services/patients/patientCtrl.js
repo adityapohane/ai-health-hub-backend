@@ -2389,7 +2389,7 @@ const assignBedToPatient = async (req, res) => {
   }
 };
 const unassignBedFromPatient = async (req, res) => {
-  const { patientId } = req.body;
+  const { patientId } = req.query;
   const unassigned_by = req.user.user_id;
 
   try {
