@@ -269,7 +269,7 @@ const submitConsentForm = async (req, res) => {
       `UPDATE patient_consent SET status = 1, received = CURRENT_TIMESTAMP,s3_bucket_url_rpm = ? WHERE consent_token = ?`,
       [s3Url, token]
     );
-    await logAudit(req, 'PDF_GENERATED', 'PATIENT_CONSENT', values.patientId, `SUBMITTED CONSENT FORM: ${values.patientId} - ${values.email}`);
+    await logAudit(req, 'PDF_GENERATED', 'PATIENT_CONSENT', values.patientId, `SUBMITTED CONSENT FORM Token/PatientID: ${rows[0].patient_id || values.token}`);
     return res.status(200).json({
       success: true,
       message: "Consent form submitted and PDF saved successfully",
@@ -283,10 +283,14 @@ const submitConsentForm = async (req, res) => {
   }
 };
 
+const sendInsurnaceWavierEmail = async (req, res) => {
+  
+}
 module.exports = {
   sendConsentEmail,
   getConsentForm,
   submitConsentForm,
+  sendInsurnaceWavierEmail
 };
 const getHTMLConsent = (values) => {
   const htmlContent = `
@@ -298,205 +302,209 @@ const getHTMLConsent = (values) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patient Consent Form</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(to right, #f0f4f8, #d9e2ec);
-      min-height: 100vh;
-      padding: 40px 20px;
-      color: #1f2937;
-    }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f8f9fa;
+    color: #212529;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
-    }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+  }
 
-    .header {
-      background: linear-gradient(135deg, #3b82f6, #06b6d4);
-      color: white;
-      padding: 30px 20px;
-      text-align: center;
-    }
+  .header {
+    background: #e0e7ff;
+    color: #1e293b;
+    padding: 30px 20px;
+    text-align: center;
+  }
 
-    .header-icon {
-      width: 70px;
-      height: 70px;
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      margin: 0 auto 20px;
-    }
+  .header-icon {
+    width: 60px;
+    height: 60px;
+    background: #c7d2fe;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin: 0 auto 20px;
+  }
 
-    .header h1 {
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
 
-    .header p {
-      font-size: 18px;
-      opacity: 0.95;
-    }
+  .header p {
+    font-size: 16px;
+    color: #334155;
+  }
 
-    .form-section {
-      padding: 40px;
-    }
+  .form-section {
+    padding: 32px;
+  }
 
-    .section-card {
-      background: #f9fafb;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      margin-bottom: 30px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-      
-    }
+  .section-card {
+    background: #fdfdfd;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  }
 
-    .section-header {
-      background: #eff6ff;
-      padding: 20px 30px;
-      border-bottom: 1px solid #dbeafe;
-    }
+  .section-header {
+    background: #f1f5f9;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+  }
 
-    .section-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #2563eb;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
 
-    .section-description {
-      color: #475569;
-      font-size: 14px;
-      margin-top: 6px;
-    }
+  .section-description {
+    color: #6b7280;
+    font-size: 14px;
+    margin-top: 4px;
+  }
 
-    .section-content {
-      padding: 30px;
-    }
+  .section-content {
+    padding: 24px;
+  }
 
+  .form-row {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .form-row > div {
+    width: 48%;
+  }
+
+  .form-row p {
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: #374151;
+  }
+
+  .form-row > div:first-child {
+    text-align: left;
+  }
+
+  .form-row > div:last-child {
+    text-align: right;
+  }
+
+  ul {
+    list-style: disc;
+    padding-left: 20px;
+    font-size: 15px;
+    color: #374151;
+  }
+
+  .checkbox-group {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+
+  .checkbox-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .checkbox-input {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    accent-color: #4b5563;
+  }
+
+  .checkbox-label {
+    font-weight: 600;
+    font-size: 15px;
+    color: #1f2937;
+    margin-bottom: 4px;
+  }
+
+  .checkbox-description {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+
+  .submit-section {
+    text-align: center;
+    padding: 30px 24px;
+    background: #f9fafb;
+  }
+
+  .submit-button {
+    background: #4b5563;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .submit-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  .disclaimer {
+    margin-top: 20px;
+    font-size: 13px;
+    color: #6b7280;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
     .form-row {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
+      flex-direction: column;
     }
 
     .form-row > div {
-      width: 48%;
+      width: 100%;
+      text-align: left !important;
     }
+  }
+</style>
 
-    .form-row p {
-      font-size: 15px;
-      margin-bottom: 10px;
-    }
-
-    .form-row > div:first-child {
-      text-align: left;
-    }
-
-    .form-row > div:last-child {
-      text-align: right;
-    }
-
-    ul {
-      list-style: disc;
-      padding-left: 20px;
-      font-size: 15px;
-    }
-
-    .checkbox-group {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 16px 20px;
-      margin-bottom: 20px;
-    }
-
-    .checkbox-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .checkbox-input {
-      width: 18px;
-      height: 18px;
-      margin-top: 4px;
-      accent-color: #2563eb;
-    }
-
-    .checkbox-label {
-      font-weight: 600;
-      font-size: 15px;
-      color: #1e293b;
-      margin-bottom: 6px;
-    }
-
-    .checkbox-description {
-      font-size: 14px;
-      color: #64748b;
-      margin-top: 4px;
-    }
-
-    .submit-section {
-      text-align: center;
-      padding: 40px 30px;
-      background: #f8fafc;
-    }
-
-    .submit-button {
-      background: linear-gradient(to right, #3b82f6, #06b6d4);
-      color: white;
-      border: none;
-      padding: 14px 32px;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .submit-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
-    }
-
-    .disclaimer {
-      margin-top: 20px;
-      font-size: 13px;
-      color: #64748b;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    @media (max-width: 768px) {
-      .form-row {
-        flex-direction: column;
-      }
-
-      .form-row > div {
-        width: 100%;
-        text-align: left !important;
-      }
-    }
-  </style>
 </head>
   <body>
     <div class="container">
@@ -575,63 +583,60 @@ const getHTMLConsent = (values) => {
             </div>
           </div>
   
-          <!-- Consent Checkboxes -->
-          <div class="section-card">
-            <div class="section-header">
-              <div class="section-title">✅ Consent & Authorization</div>
-              <div class="section-description">
-                Please review and confirm your consent
-              </div>
-            </div>
-            <div class="section-content">
-              ${[
-                {
-                  id: "treatmentConsent",
-                  label: "Treatment Consent",
-                  desc: "I consent to receive medical treatment and understand the risks, benefits, and alternatives have been explained to me.",
-                },
-                {
-                  id: "privacyConsent",
-                  label: "Privacy Policy Acknowledgment",
-                  desc: "I acknowledge that I have read and understand the privacy policy and how my personal health information will be used and protected.",
-                },
-                {
-                  id: "dataProcessingConsent",
-                  label: "Data Processing Consent",
-                  desc: "I consent to the processing of my personal data for medical care purposes, insurance claims, and healthcare coordination.",
-                },
-                {
-                  id: "communicationConsent",
-                  label: "Communication Consent (Optional)",
-                  desc: "I consent to receive appointment reminders, health information, and marketing communications via email or text message.",
-                },
-              ]
-                .map(
-                  (item) => `
-                <div class="checkbox-group">
-                  <div class="checkbox-item">
-                    <input type="checkbox" id="${item.id}" name="${
-                    item.id
-                  }" class="checkbox-input" ${
-                    item.id !== "communicationConsent" ? "required" : ""
-                  } />
-                    <div>
-                      <label class="checkbox-label" for="${item.id}">
-                        ${item.label}${
-                    item.id !== "communicationConsent"
-                      ? ' <span class="required">*</span>'
-                      : ""
-                  }
-                      </label>
-                      <div class="checkbox-description">${item.desc}</div>
-                    </div>
-                  </div>
-                </div>
-              `
-                )
-                .join("")}
+<!-- Consent Checkboxes -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="section-title">✅ Patient Consent Acknowledgments</div>
+    <div class="section-description">
+      Please review and confirm your understanding by checking all applicable boxes.
+    </div>
+  </div>
+  <div class="section-content">
+    ${[
+      {
+        id: "insuranceWaiver",
+        label: "Insurance Waiver",
+        desc: "I acknowledge that I am choosing not to utilize any insurance coverage for this visit. I understand and agree that I am personally and fully responsible for the payment of all medical services rendered during this encounter. I waive the right to submit any claims to my insurance provider and accept responsibility for any and all charges incurred."
+      },
+      {
+        id: "telemedicineConsent",
+        label: "Telemedicine Consent",
+        desc: "I hereby consent to receive healthcare services through telemedicine technology, which may include audio, video, or other electronic communications. I understand that telemedicine allows for remote diagnosis and treatment, and I acknowledge that the same privacy and confidentiality protections apply as with in-person visits. I have the right to refuse or discontinue telemedicine services at any time without affecting my future care or treatment."
+      },
+      {
+        id: "privacyPractices",
+        label: "Notice of Privacy Practices",
+        desc: "I acknowledge that I have been provided access to the provider’s Notice of Privacy Practices, which outlines how my personal health information (PHI) may be used and disclosed under the Health Insurance Portability and Accountability Act (HIPAA). I understand my rights regarding my PHI and know how to access further information or file a complaint if I have concerns."
+      },
+      {
+        id: "consentForTreatment",
+        label: "Consent for Treatment",
+        desc: "I voluntarily consent to receive medical evaluation, diagnosis, and treatment from the healthcare provider. I understand that this may include physical examinations, diagnostic testing, and therapeutic procedures as deemed necessary for my care. I acknowledge that I have the right to ask questions and decline any part of the proposed treatment plan."
+      },
+      {
+        id: "creditCardAuthorization",
+        label: "Credit Card Authorization",
+        desc: "I authorize the provider to securely store and charge my credit card for medical services rendered, including but not limited to co-pays, deductibles, non-covered services, and any outstanding balances. I understand that this authorization will remain in effect until I notify the provider in writing to revoke it, and that I will receive a receipt for each charge made."
+      }
+    ].map(
+        (item) => `
+        <div class="checkbox-group">
+          <div class="checkbox-item">
+            <input type="checkbox" id="${item.id}" name="${item.id}" class="checkbox-input" required />
+            <div>
+              <label class="checkbox-label" for="${item.id}">
+                ${item.label} <span class="required">*</span>
+              </label>
+              <div class="checkbox-description">${item.desc}</div>
             </div>
           </div>
+        </div>
+      `
+      )
+      .join("")}
+  </div>
+</div>
+
           
                   <!-- Signature Section -->
           <div class="section-card">

@@ -9,10 +9,10 @@ const fileUpload = require("express-fileupload")
 const dotenv = require("dotenv")
 const bodyParser = require("body-parser")
 const http = require("http")
-const mysql = require("mysql2/promise")
 const { setupSocketIO } = require("./config/socketio")
 const rateLimit = require('express-rate-limit');
 const path = require("path");
+const swaggerUi = require("swagger-ui-express");
 dotenv.config()
 
 const PORT = process.env.PORT || 3000
@@ -62,6 +62,11 @@ const limiter = rateLimit({
 cloudinaryConnect()
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Swagger documentation
+const swaggerSpec = require("./docs/swagger");
+app.use("/api/v1/client/api-documentation", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Routes
 const apiRoutes = require("./services/index")
 app.use("/api/v1", apiRoutes)
