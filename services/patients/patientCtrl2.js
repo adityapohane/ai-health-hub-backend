@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const puppeteer = require("puppeteer");
 const uploadFileToS3 = require("../../utils/s3Upload");
+const moment = require("moment");
 
 const sendConsentEmail = async (req, res) => {
   const values = { ...req.body, ...req.query };
@@ -267,7 +268,7 @@ const submitConsentForm = async (req, res) => {
       `UPDATE patient_consent SET status = 1, received = CURRENT_TIMESTAMP,s3_bucket_url_rpm = ? WHERE consent_token = ?`,
       [s3Url, token]
     );
-    await logAudit(req, 'PDF_GENERATED', 'PATIENT_CONSENT', values.patientId, `SUBMITTED CONSENT FORM: ${values.patientId} - ${email}`);
+    await logAudit(req, 'PDF_GENERATED', 'PATIENT_CONSENT', values.patientId, `SUBMITTED CONSENT FORM: ${values.patientId} - ${values.email}`);
     return res.status(200).json({
       success: true,
       message: "Consent form submitted and PDF saved successfully",
@@ -530,12 +531,12 @@ const getHTMLConsent = (values) => {
 
     <!-- Provider Info - Right Aligned -->
     <div style="width: 48%; text-align: right;">
-      <p>${values.doctorName}</p>
-      <p>${values.providerPhone}</p>
-      <p>${values.providerEmail}</p>
-      <p>${values.providerAddress1}</p>
-      <p>${values.providerCity} ${values.providerState} ${
-    values.providerCountry
+      <p>${values.doctorName || ""}</p>
+      <p>${values.providerPhone || ""}</p>
+      <p>${values.providerEmail || ""}</p>
+      <p>${values.providerAddress1 || ""}</p>
+      <p>${values.providerCity || ""} ${values.providerState || ""} ${
+    values.providerCountry || ""
   }</p>
       <p>${values.providerZip}</p>
     </div>
@@ -646,9 +647,12 @@ const getHTMLConsent = (values) => {
   
         </div>
       </form>
-
+    <!-- Electronically Generated -->
+    <div style="background-color:rgb(255, 255, 255); padding: 15px; text-align: center; font-size: 13px; color: #777;">
+      Electronically Generated on  ${moment().format("MM-DD-YYYY HH:mm:ss")} 
+    </div>            
     <div style="background-color: #f1f1f1; padding: 15px; text-align: center; font-size: 13px; color: #777;">
-      © ${new Date().getFullYear()} VARN DIGIHEALTH. All rights reserved.
+      © ${moment().format("YYYY")} VARN DIGIHEALTH. All rights reserved.
     </div>
     </div>
 
