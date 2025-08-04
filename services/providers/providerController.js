@@ -346,13 +346,21 @@ const addPractice = async (req, res) => {
     await logAudit(req, 'CREATE', 'PRACTICE', result.insertId, `Practice added successfully`);
 
     const [rows] = await connection.query(`select users.username,users.user_token,user_id,up.firstname,up.lastname,up.npi,up.tax_id,up.fax,pp.* from users LEFT JOIN user_profiles up On up.fk_userid left JOIN provider_practices pp on pp.provider_id = users.user_id where user_id = ? LIMIT 1`, [user_id]);
+    
     let token = rows?.[0]?.user_token;
+
+    let user = {
+      id:   rows?.[0]?.user_id,
+      firstname: rows?.[0]?.firstname,
+      lastname: rows?.[0]?.lastname,
+      email: rows?.[0]?.username,
+      role: rows?.[0]?.fk_roleid
+    };
+    
     return res.status(200).json({
-      success: true,
-      message: "Practice added successfully",
-      practice_id: result.insertId,
-      data: rows,
-      token
+      user,
+      token,
+      message: 'MFA verified'
     });
   } catch (error) {
     console.error("Add Practice Error:", error);
