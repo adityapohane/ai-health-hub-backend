@@ -491,7 +491,7 @@ const setProviderPasswordCtrl = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await connection.query(
-      'UPDATE users SET password = ?, user_token = NULL,mail_verified = 1 WHERE user_id = ?',
+      'UPDATE users SET password = ?,mail_verified = 1 WHERE user_id = ?',
       [hashedPassword, userId]
     );
 
