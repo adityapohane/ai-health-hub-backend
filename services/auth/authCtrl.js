@@ -380,7 +380,7 @@ const registerProvider = async (req, res) => {
     if (existingProvider && existingProvider.mail_verified == 1) {
       return res.status(400).json({
         success: false,
-        message: "Provider already verified. Please log in.",
+        message: "Provider already verified. Please log To your account.",
       });
     }
 

@@ -323,6 +323,70 @@ const patientsMedications = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal server error.' });
   }
 };
+const addPractice = async (req, res) => {
+  try {
+    const {
+      practiceName, practicePhone, fax, facilityName,
+      addressLine1, addressLine2, city, state, zip, country
+    } = req.body;
+    const { user_id } = req.user;
+    if (!practiceName || !practicePhone || !addressLine1 || !city || !state || !zip || !country) {
+      return res.status(400).json({
+        success: false,
+        message: "Required fields missing"
+      });
+    }
+
+    const [result] = await connection.query(
+      `INSERT INTO provider_practices 
+      (practice_name, practice_phone, fax, facility_name, address_line1, address_line2, city, state, zip, country,providerId)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
+      [practiceName, practicePhone, fax, facilityName, addressLine1, addressLine2, city, state, zip, country,user_id]
+    );
+    await logAudit(req, 'CREATE', 'PRACTICE', result.insertId, `Practice added successfully`);
+    return res.status(200).json({
+      success: true,
+      message: "Practice added successfully",
+      practice_id: result.insertId
+    });
+  } catch (error) {
+    console.error("Add Practice Error:", error);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+const editPractice = async (req, res) => {
+  try {
+    const {practiceId} = {...req.query};
+    const {
+      practiceName, practicePhone, fax, facilityName,
+      addressLine1, addressLine2, city, state, zip, country
+    } = req.body;
+    const [result] = await connection.query(
+      `UPDATE provider_practices SET 
+        practice_name = ?, 
+        practice_phone = ?, 
+        fax = ?, 
+        facility_name = ?, 
+        address_line1 = ?, 
+        address_line2 = ?, 
+        city = ?, 
+        state = ?, 
+        zip = ?, 
+        country = ? 
+      WHERE id = ?`,
+      [practiceName, practicePhone, fax, facilityName, addressLine1, addressLine2, city, state, zip, country, practiceId]
+    );
+    await logAudit(req, 'UPDATE', 'PRACTICE', practiceId, `Practice updated successfully`);
+    return res.status(200).json({
+      success: true,
+      message: "Practice updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Edit Practice Error:", error);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
 
 module.exports = {
   getAllOrganizations,
@@ -333,5 +397,7 @@ module.exports = {
   getProviderInformation,
   addPatientBillingNote,
   providerDashboardCount,
-  patientsMedications
+  patientsMedications,
+  addPractice,
+  editPractice
 };

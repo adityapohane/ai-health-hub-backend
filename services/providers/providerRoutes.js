@@ -8,7 +8,9 @@ const {
   getProviderInformation,
   addPatientBillingNote,
   providerDashboardCount,
-  patientsMedications
+  patientsMedications,
+  addPractice,
+  editPractice
 } = require("./providerController");
 const router = express.Router();
 
@@ -21,5 +23,6 @@ router.get("/getProviderInformation", getProviderInformation)
 router.post("/addPatientTimedDetails", addPatientBillingNote)
 router.get("/providerDashboardCount", providerDashboardCount)
 router.get("/patientsMedications", patientsMedications)
-
+router.post("/addPractice", addPractice)
+router.post("/editPractice", editPractice)
 module.exports = router;
