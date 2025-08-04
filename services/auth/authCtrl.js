@@ -408,7 +408,7 @@ try {
 
     <p>If the button above doesn’t work, you can also copy and paste this URL into your browser:</p>
     <p style="word-break: break-all;">
-      <a href="{{PASSWORD_LINK}}" style="color: #007bff;">{{PASSWORD_LINK}}</a>
+      <a href="${PASSWORD_LINK}" style="color: #007bff;">${PASSWORD_LINK}</a>
     </p>
 
     <p>This link will expire in 24 hours for your security.</p>
@@ -440,6 +440,48 @@ try {
     })
 }
 }
+
+const setProviderPasswordCtrl = async (req, res) => {
+  const { password, confirmPassword, token } = req.body;
+
+  // 1. Validate password match
+  if (!password || !confirmPassword || !token) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match.' });
+  }
+
+  try {
+    // 2. Check if token exists in users table
+    const [rows] = await connection.query(
+      'SELECT * FROM users WHERE user_token = ? LIMIT 1',
+      [token]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid or expired token.' });
+    }
+
+    const userId = rows[0].user_id;
+
+    // 3. Hash password and update
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await connection.query(
+      'UPDATE users SET password = ?, user_token = NULL WHERE user_id = ?',
+      [hashedPassword, userId]
+    );
+    await logAudit(req, 'UPDATE', 'USER_AUTH', userId, `User password set successfully`);
+    res.status(200).json({ message: 'Password set successfully.' });
+  } catch (err) {
+    console.error('Error setting password:', err);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}
+
+
 module.exports = {
   registerCtrl,
   loginCtrl,
@@ -447,5 +489,6 @@ module.exports = {
   verifyOtpCtrl,
   resetPasswordCtrl,
   resetPasswordTokenCtrl,
-  registerProvider
+  registerProvider,
+  setProviderPasswordCtrl
 };
