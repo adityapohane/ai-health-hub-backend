@@ -152,10 +152,85 @@ const getAllDocuments = async (req, res) => {
     });
   }
 };
+const uploadUserAgreementCtrl = async (req, res) => {
+  try {
+    const file = req.files?.pdf;
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+        error: "Please upload a PDF file",
+      });
+    }
+
+    // Validate size
+    if (file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: "File too large",
+        error: "File size exceeds 5MB",
+      });
+    }
+
+    const { user_id } = { ...req.body, ...req.query,...req.user };
+
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing user_id",
+      });
+    }
+
+    const tempPath = file.tempFilePath;
+    const fileName = `documents/user_agreements/${Date.now()}_${file.name}`;
+
+    const aws_url = await uploadFileToS3(tempPath, process.env.BUCKET_NAME, fileName);
+
+    // Save to DB
+    const [result] = await connection.execute(
+      `INSERT INTO user_service_agreements (user_id, aws_url) VALUES (?, ?)`,
+      [user_id, aws_url]
+    );
+
+    // Remove temp file
+    if (fs.existsSync(tempPath)) {
+      fs.unlinkSync(tempPath);
+    }
+
+    // Optional: audit logging
+    await logAudit(req, 'CREATE', 'USER_AGREEMENT', user_id, `Service agreement uploaded TO s3.`);
+
+    res.status(200).json({
+      success: true,
+      message: 'User service agreement uploaded successfully',
+      agreement_id: result.insertId,
+      aws_url,
+    });
+
+  } catch (err) {
+    console.error("Agreement upload error:", err);
+
+    try {
+      if (req.files?.pdf?.tempFilePath && fs.existsSync(req.files.pdf.tempFilePath)) {
+        fs.unlinkSync(req.files.pdf.tempFilePath);
+      }
+    } catch (cleanupErr) {
+      console.error("File cleanup error:", cleanupErr);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Upload failed',
+      error: err.message,
+    });
+  }
+};
 
 module.exports = {
   documentTypeCtrl,
   documentUploadCtrl,
   getDocumentsByPatientIdCtrl,
-  getAllDocuments
+  getAllDocuments,
+  uploadUserAgreementCtrl
 }

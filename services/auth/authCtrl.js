@@ -367,15 +367,69 @@ try {
         })
     }
         // Check if user already exists
-        const checkQuery = "SELECT * FROM users WHERE username = ?";
+        const checkQuery = "SELECT * FROM users WHERE username = ? AND fk_roleid = 6";
         const [existingRows] = await connection.query(checkQuery, [email]);
-    
-        if (existingRows.length > 0) {
+
+        const existingProvider = existingRows ? existingRows[0] : null;
+        if(existingProvider){
+          
+        if (existingProvider?.mail_verified == 1) {
           return res.status(400).json({
             success: false,
-            message: "User email already exists. Please sign in to continue.",
+            message: "Provider Has Already Verified Email, Please Login to Continue",
+          });
+        }else if(existingProvider?.mail_verified == 0){
+          const token = jwt.sign(
+            { username: email, user_id: existingProvider.user_id,roleid:6 },
+            process.env.JWT_SECRET
+          );
+          let PASSWORD_LINK = `${process.env.PROVIDER_VERIFICATION_LINK}/provider-verfy?token=${token}`;
+          let emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; color: #333;">
+    <div style="background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+      <h2 style="color: #2c3e50;">Welcome to YourApp!</h2>
+      <p>Hi there,</p>
+      <p>You’ve been invited to set up your password for your new account with <strong>YourApp</strong>.</p>
+      <p>Click the button below to create your password and access your account:</p>
+  
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${PASSWORD_LINK}" style="
+          background-color: #007bff;
+          color: white;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: bold;
+          display: inline-block;
+        ">Set Your Password</a>
+      </div>
+  
+      <p>If the button above doesn’t work, you can also copy and paste this URL into your browser:</p>
+      <p style="word-break: break-all;">
+        <a href="${PASSWORD_LINK}" style="color: #007bff;">${PASSWORD_LINK}</a>
+      </p>
+  
+      <p>This link will expire in 24 hours for your security.</p>
+      <p>If you did not expect this email, you can safely ignore it.</p>
+  
+      <hr style="margin: 30px 0;">
+      <p style="font-size: 12px; color: #888;">
+        Need help? Contact our support team at <a href="mailto:support@yourapp.com">support@yourapp.com</a>.
+      </p>
+    </div>
+  </div>
+  `
+          let update1 = `UPDATE users SET user_token = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
+          const result1 = await connection.query(update1, [token, existingProvider.user_id]);
+          // Log successful login attempt with OTP sent
+          mailSender(email,"AI Health Hub – Provider Verification",emailBody);
+          await logAudit(req, 'CREATE', 'USER_AUTH', existingProvider.user_id, `User login initiated, OTP sent to email: ${email}`);
+          return res.status(200).json({
+            success: true,
+            message: "Mail sent successfully"
           });
         }
+
+
         const insertQuery = "INSERT INTO users (username, password,fk_roleid) VALUES (?, null,6)";
         const values = [email];
         const [result] = await connection.query(insertQuery, values);
@@ -425,13 +479,13 @@ try {
         const result1 = await connection.query(update1, [token, result.insertId]);
         // Log successful login attempt with OTP sent
         mailSender(email,"AI Health Hub – Provider Verification",emailBody);
-        await logAudit(req, 'CREATE', 'USER_AUTH', result.insertId, `User login initiated, OTP sent to email: ${email}`);
+        await logAudit(req, 'UPDATE', 'USER_AUTH', result.insertId, `Resent OTP to email: ${email}`);
         return res.status(200).json({
           success: true,
-          token,
-          message: "OTP sent successfully"
+          message: "Mail sent successfully"
         });
-} catch (error) {
+      }
+    }catch (error) {
     console.log(error)
     return res.status(500).json({
         success: false,
@@ -470,14 +524,14 @@ const setProviderPasswordCtrl = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await connection.query(
-      'UPDATE users SET password = ?, user_token = NULL WHERE user_id = ?',
+      'UPDATE users SET password = ?, user_token = NULL,mail_verified = 1 WHERE user_id = ?',
       [hashedPassword, userId]
     );
     await logAudit(req, 'UPDATE', 'USER_AUTH', userId, `User password set successfully`);
-    res.status(200).json({ message: 'Password set successfully.' });
+    res.status(200).json({success:true, message: 'Password set successfully.' });
   } catch (err) {
     console.error('Error setting password:', err);
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({success:false, message: 'Internal server error.' });
   }
 }
 
