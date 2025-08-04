@@ -360,7 +360,7 @@ const addPractice = async (req, res) => {
     return res.status(200).json({
       user,
       token,
-      message: 'MFA verified'
+      message: 'Logged In successfully'
     });
   } catch (error) {
     console.error("Add Practice Error:", error);
