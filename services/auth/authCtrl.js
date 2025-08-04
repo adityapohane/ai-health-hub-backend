@@ -357,143 +357,110 @@ const resetPasswordCtrl = async (req, res) => {
   }
 };
 
-const registerProvider = async (req,res)=>{
-try {
-    const {firstName,lastName,email,phone} = req.body;
-    if(!firstName || !lastName || !email || !phone){
-        return res.status(400).json({
-            success:false,
-            message:"All fields are required"
-        })
-    }
-        // Check if user already exists
-        const checkQuery = "SELECT * FROM users WHERE username = ? AND fk_roleid = 6";
-        const [existingRows] = await connection.query(checkQuery, [email]);
+const registerProvider = async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone } = req.body;
 
-        const existingProvider = existingRows ? existingRows[0] : null;
-        if(existingProvider){
-          
-        if (existingProvider?.mail_verified == 1) {
-          return res.status(400).json({
-            success: false,
-            message: "Provider Has Already Verified Email, Please Login to Continue",
-          });
-        }else if(existingProvider?.mail_verified == 0){
-          const token = jwt.sign(
-            { username: email, user_id: existingProvider.user_id,roleid:6 },
-            process.env.JWT_SECRET
-          );
-          let PASSWORD_LINK = `${process.env.PROVIDER_VERIFICATION_LINK}/provider-verfy?token=${token}`;
-          let emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; color: #333;">
-    <div style="background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-      <h2 style="color: #2c3e50;">Welcome to AI Health Hub!</h2>
-      <p>Hi there,</p>
-      <p>You’ve been invited to set up your password for your new account with <strong>AI Health Hub</strong>.</p>
-      <p>Click the button below to create your password and access your account:</p>
-  
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${PASSWORD_LINK}" style="
-          background-color: #007bff;
-          color: white;
-          padding: 12px 24px;
-          text-decoration: none;
-          border-radius: 6px;
-          font-weight: bold;
-          display: inline-block;
-        ">Set Your Password</a>
-      </div>
-  
-      <p>If the button above doesn’t work, you can also copy and paste this URL into your browser:</p>
-      <p style="word-break: break-all;">
-        <a href="${PASSWORD_LINK}" style="color: #007bff;">${PASSWORD_LINK}</a>
-      </p>
-  
-      <p>This link will expire in 24 hours for your security.</p>
-      <p>If you did not expect this email, you can safely ignore it.</p>
-  
-      <hr style="margin: 30px 0;">
-      <p style="font-size: 12px; color: #888;">
-        Need help? Contact our support team at <a href="mailto:support@yourapp.com">support@yourapp.com</a>.
-      </p>
-    </div>
-  </div>
-  `
-          let update1 = `UPDATE users SET user_token = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
-          const result1 = await connection.query(update1, [token, existingProvider.user_id]);
-          // Log successful login attempt with OTP sent
-          mailSender(email,"AI Health Hub – Provider Verification",emailBody);
-          await logAudit(req, 'CREATE', 'USER_AUTH', existingProvider.user_id, `User login initiated, OTP sent to email: ${email}`);
-          return res.status(200).json({
-            success: true,
-            message: "Mail sent successfully"
-          });
-        }
-
-
-        const insertQuery = "INSERT INTO users (username, password,fk_roleid) VALUES (?, null,6)";
-        const values = [email];
-        const [result] = await connection.query(insertQuery, values);
-        const userprofileQ = "INSERT INTO user_profiles (firstname,lastname,work_email,phone,fk_userid) VALUES (?,?,?,?,?)";
-        const userprofileValues = [firstName,lastName,email,phone,result.insertId];
-        const [userprofileResult] = await connection.query(userprofileQ, userprofileValues);
-        const token = jwt.sign(
-          { username: email, user_id: result.insertId,roleid:6 },
-          process.env.JWT_SECRET
-        );
-        let PASSWORD_LINK = `${process.env.PROVIDER_VERIFICATION_LINK}/provider-verfy?token=${token}`;
-        let emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; color: #333;">
-  <div style="background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-    <h2 style="color: #2c3e50;">Welcome to YourApp!</h2>
-    <p>Hi there,</p>
-    <p>You’ve been invited to set up your password for your new account with <strong>YourApp</strong>.</p>
-    <p>Click the button below to create your password and access your account:</p>
-
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${PASSWORD_LINK}" style="
-        background-color: #007bff;
-        color: white;
-        padding: 12px 24px;
-        text-decoration: none;
-        border-radius: 6px;
-        font-weight: bold;
-        display: inline-block;
-      ">Set Your Password</a>
-    </div>
-
-    <p>If the button above doesn’t work, you can also copy and paste this URL into your browser:</p>
-    <p style="word-break: break-all;">
-      <a href="${PASSWORD_LINK}" style="color: #007bff;">${PASSWORD_LINK}</a>
-    </p>
-
-    <p>This link will expire in 24 hours for your security.</p>
-    <p>If you did not expect this email, you can safely ignore it.</p>
-
-    <hr style="margin: 30px 0;">
-    <p style="font-size: 12px; color: #888;">
-      Need help? Contact our support team at <a href="mailto:support@yourapp.com">support@yourapp.com</a>.
-    </p>
-  </div>
-</div>
-`
-        let update1 = `UPDATE users SET user_token = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?;`
-        const result1 = await connection.query(update1, [token, result.insertId]);
-        // Log successful login attempt with OTP sent
-        mailSender(email,"AI Health Hub – Provider Verification",emailBody);
-        await logAudit(req, 'UPDATE', 'USER_AUTH', result.insertId, `Resent OTP to email: ${email}`);
-        return res.status(200).json({
-          success: true,
-          message: "Mail sent successfully"
-        });
-      }
-    }catch (error) {
-    console.log(error)
-    return res.status(500).json({
+    if (!firstName || !lastName || !email || !phone) {
+      return res.status(400).json({
         success: false,
-        message: "Error in registerProvider",
-        error: error.message
-    })
-}
-}
+        message: "All fields are required",
+      });
+    }
+
+    // Check if provider already exists
+    const [existingRows] = await connection.query(
+      "SELECT * FROM users WHERE username = ? AND fk_roleid = 6",
+      [email]
+    );
+
+    const existingProvider = existingRows.length ? existingRows[0] : null;
+
+    // Case: Already exists and verified
+    if (existingProvider && existingProvider.mail_verified == 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Provider already verified. Please log in.",
+      });
+    }
+
+    // Case: Already exists but not verified
+    if (existingProvider && existingProvider.mail_verified == 0) {
+      const token = jwt.sign(
+        {
+          username: email,
+          user_id: existingProvider.user_id,
+          roleid: 6,
+        },
+        process.env.JWT_SECRET
+      );
+
+      const PASSWORD_LINK = `${process.env.PROVIDER_VERIFICATION_LINK}/provider-verfy?token=${token}`;
+      const emailBody = getProviderVerificationEmail(PASSWORD_LINK);
+
+      await connection.query(
+        "UPDATE users SET user_token = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?",
+        [token, existingProvider.user_id]
+      );
+
+      await mailSender(email, "AI Health Hub – Provider Verification", emailBody);
+      await logAudit(
+        req,
+        "UPDATE",
+        "USER_AUTH",
+        existingProvider.user_id,
+        `Resent provider verification email to ${email}`
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Verification email resent successfully",
+      });
+    }
+
+    // Case: New provider – create user & profile
+    const [insertUserResult] = await connection.query(
+      "INSERT INTO users (username, password, fk_roleid) VALUES (?, NULL, 6)",
+      [email]
+    );
+
+    const userId = insertUserResult.insertId;
+
+    await connection.query(
+      "INSERT INTO user_profiles (firstname, lastname, work_email, phone, fk_userid) VALUES (?, ?, ?, ?, ?)",
+      [firstName, lastName, email, phone, userId]
+    );
+
+    const token = jwt.sign(
+      { username: email, user_id: userId, roleid: 6 },
+      process.env.JWT_SECRET
+    );
+
+    const PASSWORD_LINK = `${process.env.PROVIDER_VERIFICATION_LINK}/provider-verfy?token=${token}`;
+    const emailBody = getProviderVerificationEmail(PASSWORD_LINK);
+
+    await connection.query(
+      "UPDATE users SET user_token = ?, modified = CURRENT_TIMESTAMP WHERE user_id = ?",
+      [token, userId]
+    );
+
+    await mailSender(email, "AI Health Hub – Provider Verification", emailBody);
+    await logAudit(req, "CREATE", "USER_AUTH", userId, `Sent verification email to ${email}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Provider registered and verification email sent",
+    });
+  } catch (error) {
+    console.error("Register Provider Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error in registerProvider",
+      error: error.message,
+    });
+  }
+};
+
 
 const setProviderPasswordCtrl = async (req, res) => {
   const { password, confirmPassword, token } = req.body;
@@ -544,7 +511,33 @@ const setProviderPasswordCtrl = async (req, res) => {
 };
 
 
-
+const getProviderVerificationEmail = (PASSWORD_LINK) => `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; color: #333;">
+    <div style="background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+      <h2 style="color: #2c3e50;">Welcome to AI Health Hub!</h2>
+      <p>Hi there,</p>
+      <p>You’ve been invited to set up your password for your new account with <strong>AI Health Hub</strong>.</p>
+      <p>Click the button below to create your password and access your account:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${PASSWORD_LINK}" style="
+          background-color: #007bff;
+          color: white;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: bold;
+          display: inline-block;">Set Your Password</a>
+      </div>
+      <p>If the button above doesn’t work, copy and paste this URL into your browser:</p>
+      <p style="word-break: break-all;">
+        <a href="${PASSWORD_LINK}" style="color: #007bff;">${PASSWORD_LINK}</a>
+      </p>
+      <p>This link will expire in 24 hours for your security.</p>
+      <hr style="margin: 30px 0;">
+      <p style="font-size: 12px; color: #888;">Need help? Contact our support at <a href="mailto:support@yourapp.com">support@yourapp.com</a>.</p>
+    </div>
+  </div>
+`;
 module.exports = {
   registerCtrl,
   loginCtrl,
