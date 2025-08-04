@@ -386,9 +386,9 @@ try {
           let PASSWORD_LINK = `${process.env.PROVIDER_VERIFICATION_LINK}/provider-verfy?token=${token}`;
           let emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; color: #333;">
     <div style="background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-      <h2 style="color: #2c3e50;">Welcome to YourApp!</h2>
+      <h2 style="color: #2c3e50;">Welcome to AI Health Hub!</h2>
       <p>Hi there,</p>
-      <p>You’ve been invited to set up your password for your new account with <strong>YourApp</strong>.</p>
+      <p>You’ve been invited to set up your password for your new account with <strong>AI Health Hub</strong>.</p>
       <p>Click the button below to create your password and access your account:</p>
   
       <div style="text-align: center; margin: 30px 0;">
