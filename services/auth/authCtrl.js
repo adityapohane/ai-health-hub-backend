@@ -500,11 +500,11 @@ const setProviderPasswordCtrl = async (req, res) => {
 
   // 1. Validate password match
   if (!password || !confirmPassword || !token) {
-    return res.status(400).json({ message: 'All fields are required.' });
+    return res.status(400).json({ success: false, message: 'All fields are required.' });
   }
 
   if (password !== confirmPassword) {
-    return res.status(400).json({ message: 'Passwords do not match.' });
+    return res.status(400).json({ success: false, message: 'Passwords do not match.' });
   }
 
   try {
@@ -515,7 +515,7 @@ const setProviderPasswordCtrl = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ message: 'Invalid or expired token.' });
+      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
     }
 
     const userId = rows[0].user_id;
@@ -527,13 +527,22 @@ const setProviderPasswordCtrl = async (req, res) => {
       'UPDATE users SET password = ?, user_token = NULL,mail_verified = 1 WHERE user_id = ?',
       [hashedPassword, userId]
     );
+
     await logAudit(req, 'UPDATE', 'USER_AUTH', userId, `User password set successfully`);
-    res.status(200).json({success:true, message: 'Password set successfully.' });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password set successfully.',
+    });
   } catch (err) {
     console.error('Error setting password:', err);
-    res.status(500).json({success:false, message: 'Internal server error.' });
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error.',
+    });
   }
-}
+};
+
 
 
 module.exports = {
