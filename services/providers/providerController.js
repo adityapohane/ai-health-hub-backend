@@ -339,7 +339,7 @@ const addPractice = async (req, res) => {
 
     const [result] = await connection.query(
       `INSERT INTO provider_practices 
-      (practice_name, practice_phone, fax, facility_name, address_line1, address_line2, city, state, zip, country,providerId)
+      (practice_name, practice_phone, fax, facility_name, address_line1, address_line2, city, state, zip, country,provider_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
       [practiceName, practicePhone, fax, facilityName, addressLine1, addressLine2, city, state, zip, country,user_id]
     );
@@ -356,7 +356,7 @@ const addPractice = async (req, res) => {
 };
 const editPractice = async (req, res) => {
   try {
-    const {practiceId} = {...req.query};
+    const {user_id} = {...req.user};
     const {
       practiceName, practicePhone, fax, facilityName,
       addressLine1, addressLine2, city, state, zip, country
@@ -373,10 +373,10 @@ const editPractice = async (req, res) => {
         state = ?, 
         zip = ?, 
         country = ? 
-      WHERE id = ?`,
-      [practiceName, practicePhone, fax, facilityName, addressLine1, addressLine2, city, state, zip, country, practiceId]
+      WHERE provider_id = ?`,
+      [practiceName, practicePhone, fax, facilityName, addressLine1, addressLine2, city, state, zip, country, user_id]
     );
-    await logAudit(req, 'UPDATE', 'PRACTICE', practiceId, `Practice updated successfully`);
+    await logAudit(req, 'UPDATE', 'PRACTICE', user_id, `Practice updated successfully`);
     return res.status(200).json({
       success: true,
       message: "Practice updated successfully"
