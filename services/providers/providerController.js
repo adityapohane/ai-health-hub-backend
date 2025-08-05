@@ -326,10 +326,27 @@ const patientsMedications = async (req, res) => {
 const addPractice = async (req, res) => {
   try {
     const {
-      practiceName, practicePhone, fax, facilityName,
-      addressLine1, addressLine2, city, state, zip, country
+      practiceName,
+      practicePhone,
+      fax,
+      facilityName,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      zip,
+      country,
+      practiceType,
+      taxId,
+      npi,
+      practiceFax,
+      practiceEmail,
+      website,
     } = req.body;
+
     const { user_id } = req.user;
+
+    // Validate required fields
     if (!practiceName || !practicePhone || !addressLine1 || !city || !state || !zip || !country) {
       return res.status(400).json({
         success: false,
@@ -337,44 +354,140 @@ const addPractice = async (req, res) => {
       });
     }
 
+    // Insert practice into DB
     const [result] = await connection.query(
-      `INSERT INTO provider_practices 
-      (practice_name, practice_phone, fax, facility_name, address_line1, address_line2, city, state, zip, country,provider_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
-      [practiceName, practicePhone, fax, facilityName, addressLine1, addressLine2, city, state, zip, country,user_id]
+      `INSERT INTO provider_practices (
+        practice_name,
+        practice_phone,
+        fax,
+        facility_name,
+        address_line1,
+        address_line2,
+        city,
+        state,
+        zip,
+        country,
+        provider_id,
+        practice_type,
+        tax_id,
+        npi,
+        practice_fax,
+        practice_email,
+        website
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        practiceName,
+        practicePhone,
+        fax,
+        facilityName,
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        zip,
+        country,
+        user_id,
+        practiceType,
+        taxId,
+        npi,
+        practiceFax,
+        practiceEmail,
+        website
+      ]
     );
+
     await logAudit(req, 'CREATE', 'PRACTICE', result.insertId, `Practice added successfully`);
 
-    const [rows] = await connection.query(`select users.username,users.fk_roleid,users.user_token,user_id,up.firstname,up.lastname,up.npi,up.tax_id,up.fax,pp.* from users LEFT JOIN user_profiles up On up.fk_userid left JOIN provider_practices pp on pp.provider_id = users.user_id where user_id = ? LIMIT 1`, [user_id]);
-    
-    let token = rows?.[0]?.user_token;
+    // Fetch user + updated practice info
+    const [rows] = await connection.query(`
+      SELECT 
+        users.username,
+        users.fk_roleid,
+        users.user_token,
+        users.user_id,
+        up.firstname,
+        up.lastname,
+        up.npi,
+        up.tax_id,
+        up.fax,
+        pp.*
+      FROM users 
+      LEFT JOIN user_profiles up ON up.fk_userid = users.user_id 
+      LEFT JOIN provider_practices pp ON pp.provider_id = users.user_id 
+      WHERE users.user_id = ?
+      ORDER BY pp.id DESC LIMIT 1
+    `, [user_id]);
 
-    let user = {
-      id:   rows?.[0]?.user_id,
-      firstname: rows?.[0]?.firstname,
-      lastname: rows?.[0]?.lastname,
-      email: rows?.[0]?.username,
-      role: rows?.[0]?.fk_roleid,
+    const data = rows?.[0];
+
+    const token = data?.user_token;
+    const user = {
+      id: data?.user_id,
+      firstname: data?.firstname,
+      lastname: data?.lastname,
+      email: data?.username,
+      role: data?.fk_roleid,
     };
-    
+
     return res.status(200).json({
       success: true,
       user,
       token,
-      message: 'Logged In successfully'
+      practice: {
+        id: data?.id,
+        practiceName: data?.practice_name,
+        practicePhone: data?.practice_phone,
+        fax: data?.fax,
+        facilityName: data?.facility_name,
+        addressLine1: data?.address_line1,
+        addressLine2: data?.address_line2,
+        city: data?.city,
+        state: data?.state,
+        zip: data?.zip,
+        country: data?.country,
+        practiceType: data?.practice_type,
+        taxId: data?.tax_id,
+        npi: data?.npi,
+        practiceFax: data?.practice_fax,
+        practiceEmail: data?.practice_email,
+        website: data?.website
+      },
+      message: 'Practice added and user logged in successfully'
     });
+
   } catch (error) {
     console.error("Add Practice Error:", error);
-    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
   }
 };
+
 const editPractice = async (req, res) => {
   try {
-    const {user_id} = {...req.user};
+    const { user_id } = req.user;
+
     const {
-      practiceName, practicePhone, fax, facilityName,
-      addressLine1, addressLine2, city, state, zip, country
+      practiceName,
+      practicePhone,
+      fax,
+      facilityName,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      zip,
+      country,
+      practiceType,
+      taxId,
+      npi,
+      practiceFax,
+      practiceEmail,
+      website
     } = req.body;
+
     const [result] = await connection.query(
       `UPDATE provider_practices SET 
         practice_name = ?, 
@@ -386,11 +499,37 @@ const editPractice = async (req, res) => {
         city = ?, 
         state = ?, 
         zip = ?, 
-        country = ? 
+        country = ?,
+        practice_type = ?,
+        tax_id = ?,
+        npi = ?,
+        practice_fax = ?,
+        practice_email = ?,
+        website = ?
       WHERE provider_id = ?`,
-      [practiceName, practicePhone, fax, facilityName, addressLine1, addressLine2, city, state, zip, country, user_id]
+      [
+        practiceName,
+        practicePhone,
+        fax,
+        facilityName,
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        zip,
+        country,
+        practiceType,
+        taxId,
+        npi,
+        practiceFax,
+        practiceEmail,
+        website,
+        user_id
+      ]
     );
+
     await logAudit(req, 'UPDATE', 'PRACTICE', user_id, `Practice updated successfully`);
+
     return res.status(200).json({
       success: true,
       message: "Practice updated successfully"
@@ -398,7 +537,45 @@ const editPractice = async (req, res) => {
 
   } catch (error) {
     console.error("Edit Practice Error:", error);
-    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+const addService = async (req, res) => {
+  try {
+    const { serviceName } = req.body;
+    const { user_id } = req.user;
+
+    if (!serviceName) {
+      return res.status(400).json({
+        success: false,
+        message: "Service name is required"
+      });
+    }
+
+    const [result] = await connection.query(
+      `INSERT INTO services_offered (service_name, provider_id) VALUES (?, ?)`,
+      [serviceName, user_id]
+    );
+
+    await logAudit(req, 'CREATE', 'SERVICE', result.insertId, `Service "${serviceName}" added for provider`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Service added successfully",
+      service_id: result.insertId
+    });
+
+  } catch (error) {
+    console.error("Add Service Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
   }
 };
 
@@ -413,5 +590,6 @@ module.exports = {
   providerDashboardCount,
   patientsMedications,
   addPractice,
-  editPractice
+  editPractice,
+  addService
 };
