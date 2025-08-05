@@ -82,11 +82,11 @@ const sendConsentEmail = async (req, res) => {
 </div>
 
   `;
-  const sql1 = `INSERT INTO patient_consent (patient_id, consent_token,consent_url) VALUES (?, ?, ?)`;
-  const [result] = await connection.query(sql1, [values.patientId, token, url]);
+  const sql1 = `INSERT INTO patient_consent_tokens (patient_id, consent_token) VALUES (?, ?)`;
+  const [result] = await connection.query(sql1, [values.patientId, token]);
   // const htmlContent = getHTMLConsent(emailvalues);
   if (email) {
-    // email = "adityapohane3989@gmail.com"; //testing
+    email = "adityapohane3989@gmail.com"; //testing
     mailSender(
       email,
       "Secure Document: Patient Consent Form for Your Approval",
@@ -104,11 +104,29 @@ const sendConsentEmail = async (req, res) => {
     });
   }
 };
-const getConsentForm = async (req, res) => {
+const getConsentDetails = async (req, res) => {
+  try {
   const { token } = req.query;
 
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing token",
+    });
+  }
+  const sql1 = `SELECT * FROM patient_consent_tokens WHERE consent_token = ? and status = 0`;
+
+  const [rows1] = await connection.query(sql1, [token]);
+
+  if (rows1.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "Link is expired or invalid",
+    });
+  }
+
   const sql = `
-        SELECT pc.patient_id,up.phone,up.dob,up.address_line,up.address_line_2,up.city,up.state,up.country,up.zip, pc.created, up.firstname, up.lastname,up.service_type,up.work_email, CONCAT(up2.firstname, " ", up2.lastname) AS doctorname,
+        SELECT pc.patient_id,up.phone,up.dob,up.address_line,up.address_line_2,up.city,up.state,up.country,up.zip, pc.created_at, up.firstname, up.lastname,up.service_type,up.work_email, CONCAT(up2.firstname, " ", up2.lastname) AS doctorname,
         up2.phone as doctorPhone,
         up2.work_email as doctorEmail,
         up2.address_line as doctorAddress1,
@@ -116,9 +134,17 @@ const getConsentForm = async (req, res) => {
         up2.city as doctorCity,
         up2.state as doctorState,
         up2.country as doctorCountry,
-        up2.zip as doctorZipcode
-        FROM patient_consent pc
+        up2.zip as doctorZipcode,
+        pp.practice_name as practiceName,
+        pp.address_line1 as practiceAddress1,
+        pp.address_line2 as practiceAddress2,
+        pp.city as practiceCity,
+        pp.state as practiceState,
+        pp.zip as practiceZipcode,
+        pp.country as practiceCountry
+        FROM patient_consent_tokens pc
         JOIN users_mappings um ON um.user_id = pc.patient_id
+        LEFT JOIN provider_practices pp ON pp.provider_id = um.fk_physician_id
         LEFT JOIN user_profiles up ON up.fk_userid = pc.patient_id
         LEFT JOIN user_profiles up2 ON up2.fk_userid = um.fk_physician_id
         WHERE pc.consent_token = ?
@@ -126,16 +152,13 @@ const getConsentForm = async (req, res) => {
   const [rows] = await connection.query(sql, [token]);
 
   if (rows.length === 0) {
-    return res.status(404).send("<h3>Invalid or expired token.</h3>");
+    return res.status(404).json({
+      success: false,
+      message: "Link is expired or invalid",
+    });
   }
 
-  const consent = rows[0];
-  // let emailvalues = {
-  //     firstName: consent.firstname,
-  //     lastName: consent.lastname,
-  //     doctorName: consent.doctorname,
-  //     patientId: consent.patientId,
-  // }
+  const consent = rows[0]
   const services = consent.service_type;
   const servicesNamed = services
     ?.filter((service) => service)
@@ -169,12 +192,18 @@ const getConsentForm = async (req, res) => {
     providerState: consent.doctorState || "",
     providerZip: consent.doctorZipcode || "",
 
+    //Practice Info
+    practiceName: consent.practiceName || "",
+    practiceAddress1: consent.practiceAddress1 || "",
+    practiceAddress2: consent.practiceAddress2 || "",
+    practiceCity: consent.practiceCity || "",
+    practiceState: consent.practiceState || "",
+    practiceZip: consent.practiceZipcode || "",
+    practiceCountry: consent.practiceCountry || "",
+
     // Selected Services
     services: servicesNamed,
   };
-
-  const htmlContent = getHTMLConsent(emailvalues);
-
   const createdTime = new Date(consent.created);
   const now = new Date();
   const timeDiff = (now - createdTime) / (1000 * 60 * 60); // hours
@@ -183,7 +212,17 @@ const getConsentForm = async (req, res) => {
     return res.status(410).send("<h3>Consent link has expired.</h3>");
   }
 
-  res.send(htmlContent);
+  return res.status(200).json({
+    success: true,
+    data: emailvalues,
+  });
+} catch (error) {
+  console.error("Error in consent form submission:", error);
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+}
 };
 
 const submitConsentForm = async (req, res) => {
@@ -282,15 +321,94 @@ const submitConsentForm = async (req, res) => {
     });
   }
 };
+const uploadConsentForms = async (req, res) => {
+  try {
+    const file = req.files?.pdf;
 
-const sendInsurnaceWavierEmail = async (req, res) => {
-  
-}
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+        error: "Please upload a PDF file",
+      });
+    }
+
+    // Validate size
+    if (file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: "File too large",
+        error: "File size exceeds 5MB",
+      });
+    }
+
+    const { token,consentType } = { ...req.body, ...req.query,...req.user };
+    console.log(req.body,req.query,req.user)
+    if (!token || !consentType) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing token or consent type",
+      });
+    }
+    const [rows] = await connection.query(
+      `SELECT * FROM patient_consent_tokens WHERE consent_token = ?`,
+      [token]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Link is expired or invalid",
+      });
+    }
+    const user_id = rows[0].patient_id;
+
+    const tempPath = file.tempFilePath;
+    const fileName = `documents/consents/${Date.now()}_${file.name}`;
+
+    const aws_url = await uploadFileToS3(tempPath, process.env.BUCKET_NAME, fileName);
+
+    // Save to DB
+    const [result] = await connection.execute(
+      `INSERT INTO patient_consent (patient_id, s3_bucket_url_rpm,consent_type) VALUES (?, ?,?)`,
+      [user_id, aws_url,consentType]
+    );
+
+    // Remove temp file
+    if (fs.existsSync(tempPath)) {
+      fs.unlinkSync(tempPath);
+    }
+
+    // Optional: audit logging
+    await logAudit(req, 'CREATE', `PATIENT_CONSENT-${consentType}`, user_id, `Consent form uploaded to s3.`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Consent form uploaded successfully',
+    });
+
+  } catch (err) {
+    console.error("Agreement upload error:", err);
+
+    try {
+      if (req.files?.pdf?.tempFilePath && fs.existsSync(req.files.pdf.tempFilePath)) {
+        fs.unlinkSync(req.files.pdf.tempFilePath);
+      }
+    } catch (cleanupErr) {
+      console.error("File cleanup error:", cleanupErr);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Upload failed',
+      error: err.message,
+    });
+  }
+};
 module.exports = {
   sendConsentEmail,
-  getConsentForm,
+  getConsentDetails,
   submitConsentForm,
-  sendInsurnaceWavierEmail
+  uploadConsentForms
 };
 const getHTMLConsent = (values) => {
   const htmlContent = `
@@ -476,11 +594,7 @@ const getHTMLConsent = (values) => {
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .submit-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    margin-top: 2rem;
   }
 
   .disclaimer {
@@ -501,6 +615,11 @@ const getHTMLConsent = (values) => {
     .form-row > div {
       width: 100%;
       text-align: left !important;
+    }
+    .signature-box {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
     }
   }
 </style>
@@ -656,9 +775,6 @@ const getHTMLConsent = (values) => {
               </div>
             </div>
           </div>
-          <div id="signature-container">
-  <img id="signature-image" src="" style="max-width: 300px; border: 1px solid #ccc; margin-top: 10px;" />
-</div>
           <!-- Submit -->
           <div class="submit-section" style="text-align:center; padding:30px;">
             <button type="submit" class="submit-button">
