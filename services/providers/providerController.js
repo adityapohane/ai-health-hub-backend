@@ -471,59 +471,71 @@ const editPractice = async (req, res) => {
 
     const {
       practiceName,
+      practiceType,
+      taxId,
+      npi,
       practicePhone,
-      fax,
-      facilityName,
+      practiceFax,
+      practiceEmail,
+      website,
       addressLine1,
       addressLine2,
       city,
       state,
-      zip,
+      zipCode,
       country,
-      practiceType,
-      taxId,
-      npi,
-      practiceFax,
-      practiceEmail,
-      website
+      operatingHours,
+      servicesOffered,
+      insuranceNetworks,
+      hospitalAffiliations
     } = req.body;
+
+    // Convert complex fields to JSON strings
+    const officeHoursJson = JSON.stringify(operatingHours || {});
+    const selectedServicesJson = JSON.stringify(servicesOffered || []);
+    const selectedNetworksJson = JSON.stringify(insuranceNetworks || []);
+    const affiliationsJson = JSON.stringify(hospitalAffiliations || []);
 
     const [result] = await connection.query(
       `UPDATE provider_practices SET 
         practice_name = ?, 
+        practice_type = ?, 
+        tax_id = ?, 
+        npi = ?, 
         practice_phone = ?, 
-        fax = ?, 
-        facility_name = ?, 
+        practice_fax = ?, 
+        practice_email = ?, 
+        website = ?, 
         address_line1 = ?, 
         address_line2 = ?, 
         city = ?, 
         state = ?, 
         zip = ?, 
-        country = ?,
-        practice_type = ?,
-        tax_id = ?,
-        npi = ?,
-        practice_fax = ?,
-        practice_email = ?,
-        website = ?
+        country = ?, 
+        office_hours = ?, 
+        selected_services = ?, 
+        selected_insurances = ?, 
+        hospital_affiliations = ?
       WHERE provider_id = ?`,
       [
         practiceName,
+        practiceType,
+        taxId,
+        npi,
         practicePhone,
-        fax,
-        facilityName,
+        practiceFax,
+        practiceEmail,
+        website,
         addressLine1,
         addressLine2,
         city,
         state,
-        zip,
+        zipCode,
         country,
-        practiceType,
-        taxId,
-        npi,
-        practiceFax,
-        practiceEmail,
-        website,
+        officeHoursJson,
+        selectedServicesJson,
+        selectedNetworksJson,
+        affiliationsJson,
         user_id
       ]
     );
@@ -544,6 +556,7 @@ const editPractice = async (req, res) => {
     });
   }
 };
+;
 const addService = async (req, res) => {
   try {
     const { serviceName } = req.body;
@@ -614,30 +627,73 @@ const addInsuranceNetwork = async (req, res) => {
 };
 const getProviderDetails = async (req, res) => {
   try {
-    const { providerId } = { ...req.params, ...req.query };
-    if (!providerId) {
-      return res.status(400).json({ success: false, message: "Missing providerId" });
-    }
     const user_id = req.user.user_id;
-    // Get services
-    const [services] = await connection.query(
+
+    // Get practice info
+    const [practiceRows] = await connection.query(
+      `SELECT * FROM provider_practices WHERE provider_id = ? LIMIT 1`,
+      [user_id]
+    );
+
+    if (!practiceRows.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No practice found for this provider"
+      });
+    }
+
+    const practice = practiceRows[0];
+
+    // Parse main fields stored as JSON
+    const operatingHours = practice.office_hours || {};
+    const servicesOffered = practice.selected_services || [];
+    const insuranceNetworks = practice.selected_insurances || [];
+    const hospitalAffiliations = Array.isArray(practice.hospital_affiliations)
+    ? practice.hospital_affiliations
+    : [];
+  
+
+    // Additional (manually added) services
+    const [manualServices] = await connection.query(
       `SELECT service_name FROM services_offered WHERE provider_id = ?`,
       [user_id]
     );
+    const additionalServicesOffered = manualServices.map(s => s.service_name);
 
-    // Get insurance networks
-    const [networks] = await connection.query(
+    // Additional insurance networks
+    const [manualNetworks] = await connection.query(
       `SELECT network_name FROM insurance_networks WHERE provider_id = ?`,
       [user_id]
     );
+    const additionalInsuranceNetworks = manualNetworks.map(n => n.network_name);
 
-    const serviceList = services.map(s => s.service_name);
-    const insuranceList = networks.map(n => n.network_name);
+    // Final response object
+    const response = {
+      practiceName: practice.practice_name || "",
+      practiceType: practice.practice_type || "",
+      taxId: practice.tax_id || "",
+      npi: practice.npi || "",
+      practicePhone: practice.practice_phone || "",
+      practiceFax: practice.practice_fax || "",
+      practiceEmail: practice.practice_email || "",
+      website: practice.website || "",
+      addressLine1: practice.address_line1 || "",
+      addressLine2: practice.address_line2 || "",
+      city: practice.city || "",
+      state: practice.state || "",
+      zipCode: practice.zip || "",
+      country: practice.country || "",
+      operatingHours,
+      servicesOffered,
+      insuranceNetworks,
+      hospitalAffiliations,
+      additionalServicesOffered,
+      additionalInsuranceNetworks
+    };
 
     return res.status(200).json({
       success: true,
-      additionalServices: serviceList,
-      additionalInsuranceNetworks: insuranceList
+      data: response
     });
 
   } catch (error) {
