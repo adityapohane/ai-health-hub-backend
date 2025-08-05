@@ -578,6 +578,78 @@ const addService = async (req, res) => {
     });
   }
 };
+const addInsuranceNetwork = async (req, res) => {
+  try {
+    const { networkName } = req.body;
+    const { user_id } = req.user;
+
+    if (!networkName) {
+      return res.status(400).json({
+        success: false,
+        message: "Network name is required"
+      });
+    }
+
+    const [result] = await connection.query(
+      `INSERT INTO insurance_networks (network_name, provider_id) VALUES (?, ?)`,
+      [networkName, user_id]
+    );
+
+    await logAudit(req, 'CREATE', 'INSURANCE_NETWORK', result.insertId, `Insurance network "${networkName}" added`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Insurance network added successfully",
+      network_id: result.insertId
+    });
+
+  } catch (error) {
+    console.error("Add Insurance Network Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+const getProviderDetails = async (req, res) => {
+  try {
+    const { providerId } = { ...req.params, ...req.query };
+    if (!providerId) {
+      return res.status(400).json({ success: false, message: "Missing providerId" });
+    }
+    
+    // Get services
+    const [services] = await connection.query(
+      `SELECT service_name FROM services_offered WHERE provider_id = ?`,
+      [providerId]
+    );
+
+    // Get insurance networks
+    const [networks] = await connection.query(
+      `SELECT network_name FROM insurance_networks WHERE provider_id = ?`,
+      [providerId]
+    );
+
+    const serviceList = services.map(s => s.service_name);
+    const insuranceList = networks.map(n => n.network_name);
+
+    return res.status(200).json({
+      success: true,
+      additionalServices: serviceList,
+      additionalInsuranceNetworks: insuranceList
+    });
+
+  } catch (error) {
+    console.error("Get Provider Details Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+
 
 module.exports = {
   getAllOrganizations,
@@ -591,5 +663,7 @@ module.exports = {
   patientsMedications,
   addPractice,
   editPractice,
-  addService
+  addService,
+  addInsuranceNetwork,
+  getProviderDetails
 };
