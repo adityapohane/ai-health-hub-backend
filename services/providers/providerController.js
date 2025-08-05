@@ -467,8 +467,7 @@ const addPractice = async (req, res) => {
 
 const editPractice = async (req, res) => {
   try {
-    const { user_id } = req.user;
-
+    let { user_id } = req.user;
     const {
       practiceName,
       practiceType,
@@ -539,6 +538,40 @@ const editPractice = async (req, res) => {
         user_id
       ]
     );
+    
+    if (result.affectedRows === 0) {
+      // No record found → Insert new one
+      await connection.query(
+        `INSERT INTO provider_practices (
+          provider_id, practice_name, practice_type, tax_id, npi, 
+          practice_phone, practice_fax, practice_email, website, 
+          address_line1, address_line2, city, state, zip, country, 
+          office_hours, selected_services, selected_insurances, hospital_affiliations
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          user_id,
+          practiceName,
+          practiceType,
+          taxId,
+          npi,
+          practicePhone,
+          practiceFax,
+          practiceEmail,
+          website,
+          addressLine1,
+          addressLine2,
+          city,
+          state,
+          zipCode,
+          country,
+          officeHoursJson,
+          selectedServicesJson,
+          selectedNetworksJson,
+          affiliationsJson
+        ]
+      );
+    }
+    
 
     await logAudit(req, 'UPDATE', 'PRACTICE', user_id, `Practice updated successfully`);
 
