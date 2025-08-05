@@ -618,17 +618,17 @@ const getProviderDetails = async (req, res) => {
     if (!providerId) {
       return res.status(400).json({ success: false, message: "Missing providerId" });
     }
-    
+    const user_id = req.user.user_id;
     // Get services
     const [services] = await connection.query(
       `SELECT service_name FROM services_offered WHERE provider_id = ?`,
-      [providerId]
+      [user_id]
     );
 
     // Get insurance networks
     const [networks] = await connection.query(
       `SELECT network_name FROM insurance_networks WHERE provider_id = ?`,
-      [providerId]
+      [user_id]
     );
 
     const serviceList = services.map(s => s.service_name);
