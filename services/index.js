@@ -19,10 +19,9 @@ const billingRoutes = require("./billings/billingRoutes");
 const ccmRoutes = require("./ccm/ccmRoutes");
 const encountersRoutes = require("./encounters/encounterRoutes");
 const devicesRoutes = require("./devices/devicesRoutes");
-const { getConsentForm, submitConsentForm } = require("./patients/patientCtrl2");
+const { getConsentDetails, submitConsentForm,uploadConsentForms } = require("./patients/patientCtrl2");
 const thirdPartyApiRoutes = require("./third-party-apis/api-routes");
 const generalRoutes = require("./general-apis/generalRoutes");
-
 
 
 
@@ -46,8 +45,9 @@ router.use("/billing",verifyToken, billingRoutes);
 router.use("/ccm",verifyToken, ccmRoutes);
 router.use("/encounters",verifyToken, encountersRoutes);
 router.use("/devices",verifyToken, devicesRoutes);
-router.get("/ehr/consent-form", getConsentForm);
+router.get("/ehr/consent-form", getConsentDetails);
 router.post('/ehr/consent-form', submitConsentForm);
+router.post('/ehr/upload-consent-form', uploadConsentForms);
 //for third Party APIs !IMPORTANT
 router.use("/client",thirdPartyApiRoutes);
 //for Testing
