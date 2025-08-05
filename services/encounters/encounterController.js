@@ -150,9 +150,12 @@ const createEncounter = async (req, res) => {
   }
 };
 const getAllEncounters = async (req, res) => {
+  const { patientId } = { ...req.params, ...req.query };
   try {
+    let sql=  `SELECT * FROM encounters WHERE provider_id = ? ${patientId ? `AND patient_id = ${patientId}` : ''} ORDER BY created DESC`;
+    // console.log(sql)
     const [rows] = await connection.query(
-      `SELECT * FROM encounters WHERE provider_id = ? ORDER BY created DESC`,
+     sql,
       [req.user.user_id]
     );
     res.status(200).json({
