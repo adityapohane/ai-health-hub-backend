@@ -315,6 +315,70 @@ const addEncounterTemplate = async (req, res) => {
     });
   }
 };
+const updateProviderEncounterTemplate = async (req, res) => {
+  try {
+    const {
+      id:templateId,
+      name: encounter_name,
+      specialty: encounter_type,
+      visitType,
+      isDefault,
+      isActive,
+      soapStructure,
+      billingCodes
+    } = { ...req.body, ...req.query };
+
+    if (!templateId) {
+      return res.status(400).json({
+        success: false,
+        message: "templateId is required to update the template"
+      });
+    }
+
+    const [result] = await connection.query(
+      `UPDATE providers_encounter_template
+       SET encounter_name = ?, 
+           encounter_type = ?, 
+           visit_type = ?, 
+           is_default = ?, 
+           is_active = ?, 
+           soap_structure = ?, 
+           billing_codes = ?
+       WHERE template_id = ? AND created_by = ?`,
+      [
+        encounter_name,
+        encounter_type,
+        visitType,
+        isDefault || false,
+        isActive || true,
+        JSON.stringify(soapStructure),
+        JSON.stringify(billingCodes),
+        templateId,
+        req.user.user_id
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Template not found or not authorized to update"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Template updated successfully"
+    });
+
+  } catch (err) {
+    console.error("Update Template Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update template",
+      error: err.message
+    });
+  }
+};
 
 module.exports = {
   createEncounterTemplate,
@@ -328,5 +392,6 @@ module.exports = {
   updateEncounterById,
   deleteEncounterById,
   addEncounterTemplate,
-  getProviderEncounterTemplates
+  getProviderEncounterTemplates,
+  updateProviderEncounterTemplate
 };
