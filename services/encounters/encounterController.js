@@ -71,7 +71,7 @@ const getProviderEncounterTemplates = async (req, res) => {
   try {
     const userId = req.user.user_id;
     const  {templateId} = { ...req.params, ...req.query };
-    let sql = `SELECT * FROM encounter_templates WHERE created_by = ${userId}`;
+    let sql = `SELECT encounter_name, encounter_type, visit_type, is_default, is_active, soap_structure, billing_codes, created_by,created  FROM providers_encounter_template WHERE created_by = ${userId}`;
     
     if(templateId){
       sql += ` AND template_id = ${templateId}`;
@@ -284,9 +284,8 @@ const addEncounterTemplate = async (req, res) => {
       isDefault, isActive,
       soapStructure, billingCodes
     } = req.body;
-    
     const [result] = await connection.query(
-      `INSERT INTO encounter_templates 
+      `INSERT INTO providers_encounter_template 
         (encounter_name, encounter_type, visit_type, is_default, is_active, soap_structure, billing_codes, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [

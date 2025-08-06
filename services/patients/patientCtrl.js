@@ -2515,6 +2515,188 @@ const getAllConsents = async (req, res) => {
     });
   }
 };
+const getMedicalHistoryByPatientId = async (req, res) => {
+  try {
+    const { patientId } = { ...req.query, ...req.params, ...req.body };
+    if(!patientId){
+      return res.status(400).json({
+        success: false,
+        message: "Patient ID is required",
+      });
+    }
+    const { user_id } = req.user;
+
+    const [profileRows] = await connection.query(
+      `SELECT 
+    up.firstname,
+    up.middlename,
+    up.lastname,
+    up.work_email,
+    up.phone,
+    up.gender,
+    up.address_line,
+    up.address_line_2,
+    up.city,
+    up.state,
+    up.country,
+    up.zip,
+    up.dob,
+    up.last_visit,
+    up.emergency_contact,
+    up.height,
+    up.dry_weight,
+    up.bmi,
+    up.bp,
+    up.patient_condition,
+    up.heart_rate,
+    up.temp,
+    um.fk_physician_id,
+    CASE (up.status)
+      WHEN 1 THEN 'Critical'
+      WHEN 2 THEN 'Abnormal'
+      WHEN 3 THEN 'Normal'
+      ELSE 'NA'
+    END AS status,
+    u.created,
+    up.service_type,
+    pp.practice_name as practiceName,
+    pp.facility_name as facilityName,
+    pp.address_line1 as practiceAddress,
+    pp.address_line2 as practiceAddress2,
+    pp.city as practiceCity,
+    pp.state as practiceState,
+    pp.zip as practiceZip,
+    pp.country as practiceCountry,
+    pp.practice_phone as practicePhone,
+    pp.practice_email as practiceEmail,
+    pp.website as practiceWebsite,
+    pp.practice_type as practiceType,
+    pp.npi as practiceNpi,
+   CONCAT(up2.firstname," ",up2.lastname) as physicianName,
+   um.fk_physician_id as physicianId,
+   up2.address_line as physicianAddress,
+   up2.address_line_2 as physicianAddress2,
+   up2.state as physicianState,up2.city as physicianCity,up2.country as physicianCountry
+  FROM user_profiles up
+  LEFT JOIN users u on u.user_id = up.fk_userid
+  LEFT JOIN users_mappings um ON um.user_id = up.fk_userid
+  LEFT JOIN user_profiles up2 ON up2.fk_userid = um.fk_physician_id
+  LEFT JOIN provider_practices pp ON pp.provider_id = um.fk_physician_id
+  WHERE up.fk_userid = ?`,
+      [patientId]
+    );
+
+    const profile = profileRows[0];
+
+    const [userRows] = await connection.query(
+      `SELECT username FROM users WHERE user_id = ?`,
+      [patientId]
+    );
+    const user = userRows[0];
+    //#production
+    // Get medications
+    const [currentMedications] = await connection.query(
+      `SELECT name, dosage, frequency, prescribed_by, startDate, endDate, status, id,refills
+       FROM patient_medication
+       WHERE patient_id = ? ORDER BY id DESC`,
+      [patientId]
+    );
+    const [allergies] = await connection.query(
+      `SELECT reaction,created,allergen,category_name FROM allergies LEFT JOIN allergies_category on category_id = category WHERE patient_id = ? order by created DESC`,
+      [patientId]
+    );
+
+    // Get diagnoses
+    const [diagnosis] = await connection.query(
+      `SELECT date, icd10, diagnosis, status, id, type
+       FROM patient_diagnoses
+       WHERE patient_id = ? ORDER BY id DESC`,
+      [patientId]
+    );
+
+    const [notes] = await connection.query(
+      `SELECT note, created,duration,type, created_by, note_id
+       FROM notes
+       WHERE patient_id = ? ORDER BY note_id DESC`,
+      [patientId]
+    );
+    const [vitals] = await connection.query(
+      `SELECT *
+       FROM patient_vitals
+       WHERE patient_id = ? order by created DESC limit 1`,
+      [patientId]
+    );
+    const [tasks] = await connection.query(
+      `SELECT *
+       FROM tasks
+       WHERE patient_id = ? ORDER BY created DESC`,
+      [patientId]
+    );
+    if (profile) {
+      const response = {
+        firstName: profile.firstname,
+        middleName: profile.middlename,
+        lastName: profile.lastname,
+        email: profile.work_email || user?.username,
+        phone: profile.phone,
+        gender: profile.gender,
+        status: profile.status,
+        addressLine1: profile.address_line,
+        addressLine2: profile.address_line_2,
+        city: profile.city,
+        state: profile.state,
+        country: profile.country,
+        zipCode: profile.zip,
+        birthDate: profile.dob,
+        lastVisit: profile.last_visit,
+        emergencyContact: profile.emergency_contact,
+        patientService: profile.service_type,
+        notes: [...notes],
+        createdBy: notes?.[0]?.created_by || null,
+        created: profile.created,
+        patientId,
+        providerId: profile.physicianId,
+        providerName: profile.physicianName,
+        providerState: profile.physicianState,
+        providerCity: profile.physicianCity,
+        providerCountry: profile.physicianCountry,
+        practiceName: profile.practiceName,
+        practiceAddress1: profile.practiceAddress,
+        practiceAddress2: profile.practiceAddress2,
+        practiceCity: profile.practiceCity,
+        practiceState: profile.practiceState,
+        practiceZip: profile.practiceZip,
+        practiceCountry: profile.practiceCountry,
+        practicePhone: profile.practicePhone,
+        practiceEmail: profile.practiceEmail,
+        practiceWebsite: profile.practiceWebsite,
+        practiceType: profile.practiceType,
+        practiceNpi: profile.practiceNpi,
+        currentMedications,
+        diagnosis,
+        vitals,
+        tasks,
+        allergies
+      };
+      return res.status(200).json({
+        success: true,
+        message: "Patient data fetched successfully",
+        data: response,
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "Patient data not found",
+      });
+    }
+
+  } catch (error) {
+    console.error("Error fetching patient data:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error in get patient data API" });
+  }
+};
 
 module.exports = {
   addPatient,
@@ -2547,4 +2729,5 @@ module.exports = {
   unassignBedFromPatient,
   getAllBeds,
   getAllConsents,
+  getMedicalHistoryByPatientId,
 };
