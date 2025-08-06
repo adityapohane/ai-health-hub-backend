@@ -6,8 +6,8 @@ exports.createAppointment = async (req, res) => {
     const {
       id,
       patient,
-      date,          // ISO string with timezone, e.g., "2025-07-03T09:00:00+05:30"
-      duration,      // e.g., "30 minutes"
+      date,            // raw ISO date: "2025-08-06T10:00:00"
+      duration,        // e.g., "30 minutes"
       type,
       status,
       hasBilling,
@@ -21,25 +21,20 @@ exports.createAppointment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    const durationMinutes = parseInt(duration); // e.g., "30" from "30 minutes"
+    const durationMinutes = parseInt(duration);
     if (isNaN(durationMinutes)) {
       return res.status(400).json({ success: false, message: "Invalid duration format" });
     }
 
-    // Extract raw date-time (in IST) from frontend without UTC conversion
-    const [datePart, timePart] = date.split('T');
-    const [hour, minute, secondWithTZ] = timePart.split(':');
-    const second = secondWithTZ.split('+')[0]; // remove +05:30 if exists (safe fallback)
+    // ✅ Use the raw date string, don't parse it
+    const startTime = date.replace("T", " ") + ":00"; // e.g., "2025-08-06 10:00:00"
 
-    // Format for MySQL
-    const startTimeStr = `${datePart} ${hour}:${minute}:${second}`;
+    // ✅ For end time calculation only (duration), use JS Date (optional)
+    const startDate = new Date(date);
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+    const endTime = endDate.toISOString().replace("T", " ").slice(0, 19); // "2025-08-06 10:30:00"
 
-    // Calculate end time using Date object for duration calculation
-    const startDateLocal = new Date(`${startTimeStr}`);
-    const endDate = new Date(startDateLocal.getTime() + durationMinutes * 60000);
-    const endTimeStr = endDate.toISOString().slice(0, 19).replace("T", " ");
-
-    // Check for overlapping appointments
+    // Check for overlap using raw local time (startTime is assumed local)
     const [existing] = await db.execute(
       `
       SELECT * FROM appointment 
@@ -47,8 +42,8 @@ exports.createAppointment = async (req, res) => {
       AND (
         (date < ? AND DATE_ADD(date, INTERVAL duration MINUTE) > ?)
       )
-    `,
-      [providerId, endTimeStr, startTimeStr]
+      `,
+      [providerId, endTime, startTime]
     );
 
     if (existing.length > 0) {
@@ -57,8 +52,9 @@ exports.createAppointment = async (req, res) => {
         message: "Time slot already booked for this provider",
       });
     }
+const rawDateTime = date.replace("T", " ") + ":00"; // "2025-08-28 13:30:00"
 
-    // Insert appointment
+    // Store appointment with exact time from frontend
     const insertQuery = `
       INSERT INTO appointment (
         id, patient_id, patient_name, patient_phone, patient_email,
@@ -73,7 +69,7 @@ exports.createAppointment = async (req, res) => {
       patient.name,
       patient.phone,
       patient.email,
-      startTimeStr,
+      rawDateTime,               // Store exactly what frontend sent (formatted)
       durationMinutes,
       type,
       status,
@@ -85,6 +81,7 @@ exports.createAppointment = async (req, res) => {
     ];
 
     await db.execute(insertQuery, values);
+
     await logAudit(req, 'CREATE', 'APPOINTMENT', patient.id, 'Appointment created successfully');
 
     return res.status(201).json({ success: true, message: "Appointment created successfully" });
@@ -93,6 +90,9 @@ exports.createAppointment = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
+
+
 
 
 
@@ -142,7 +142,7 @@ exports.getAppointmentsByProviderId = async (req, res) => {
           phone: row.patient_phone,
           email: row.patient_email,
         },
-        date: formattedIST, // ✅ Correctly formatted IST string
+        date: row.date, // ✅ Correctly formatted IST string
         duration: row.duration,
         type: row.type,
         status: row.status,
