@@ -167,6 +167,77 @@ const [appointments] = await db.query(query, values);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+exports.getApppointmentsByPatientId = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { date } = req.query;
+    console.log(date);
+    if (!patientId) {
+      return res.status(400).json({ message: "Patient ID is required" });
+    }
+    let query = `
+    SELECT * FROM appointment
+    WHERE patient_id = ?
+    ${date ? 'AND LEFT(date, 10) = ?' : ''}
+    ORDER BY date DESC
+  `;
+  let values = [patientId];
+if (date) values.push(date);
+
+const [appointments] = await db.query(query, values);
+
+
+    const transformed = await Promise.all(appointments.map(async (row) => {
+      const utcDate = new Date(row.date); // Date from MySQL (in UTC)
+
+      // ✅ Manually convert to IST by adding 5 hours 30 minutes
+      const istOffset = 5.5 * 60 * 60 * 1000; // 19800000 milliseconds
+      const istDate = new Date(utcDate.getTime() + istOffset);
+
+      // ✅ Format as ISO string with +05:30 manually
+      const pad = (n) => n.toString().padStart(2, '0');
+
+      const yyyy = istDate.getFullYear();
+      const mm = pad(istDate.getMonth() + 1);
+      const dd = pad(istDate.getDate());
+      const hh = pad(istDate.getHours());
+      const min = pad(istDate.getMinutes());
+      const ss = pad(istDate.getSeconds());
+
+      const formattedIST = `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+05:30`;
+      if(row.template_id){
+        const [template] = await db.execute(
+          "SELECT template_id,encounter_name, encounter_type, visit_type, is_default, is_active, soap_structure, billing_codes, created_by,created  FROM providers_encounter_template WHERE template_id = ?",
+          [row.template_id]
+        );
+        row.template = template.length > 0 ? template[0] : null;
+      }
+      return {
+        id: row.id,
+        patient: {
+          id: row.patient_id,
+          name: row.patient_name,
+          phone: row.patient_phone,
+          email: row.patient_email,
+        },
+        date: row.date, // ✅ Correctly formatted IST string
+        duration: row.duration,
+        type: row.type,
+        status: row.status,
+        hasBilling: !!row.has_billing,
+        providerId: row.provider_id,
+        locationId: row.location_id,
+        reason: row.reason,
+        template: row.template || null,
+      };
+    }));
+
+    res.status(200).json({ success: true, data: transformed });
+  } catch (err) {
+    console.error("Fetch by provider error:", err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 
 exports.upcomingAppointments = async (req, res) => {
   try {
