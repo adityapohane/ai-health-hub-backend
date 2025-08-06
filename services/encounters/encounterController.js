@@ -41,15 +41,30 @@ const createEncounterTemplate = async (req, res) => {
 
 const getEncounterTemplates = async (req, res) => {
   try {
-    const [rows] = await connection.query(
-      `SELECT * FROM encounter_templates ORDER BY created DESC`
+    const userId = req.user.user_id;
+    const  {template_id} = { ...req.params, ...req.query };
+    let sql = `SELECT * FROM encounter_templates WHERE created_by = ${userId}`;
+    
+    if(template_id){
+      sql += ` AND template_id = ${template_id}`;
+    }
+    sql += ` order by created DESC`;
+    const [templates] = await connection.query(
+     sql,
+      [userId]
     );
-    res.status(200).json({
+
+    return res.status(200).json({
       success: true,
-      data: rows
+      data: templates
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to fetch templates' });
+    console.error("Get Encounter Templates Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
   }
 };
 
@@ -234,6 +249,45 @@ const deleteEncounterById = async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to delete encounter' });
   }
 };
+const addEncounterTemplate = async (req, res) => {
+  try {
+    const {
+      name:encounter_name, specialty:encounter_type, visitType,
+      isDefault, isActive,
+      soapStructure, billingCodes
+    } = req.body;
+    
+    const [result] = await connection.query(
+      `INSERT INTO encounter_templates 
+        (encounter_name, encounter_type, visit_type, is_default, is_active, soap_structure, billing_codes, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        encounter_name,
+        encounter_type,
+        visitType,
+        isDefault || false,
+        isActive || true,
+        JSON.stringify(soapStructure),
+        JSON.stringify(billingCodes),
+        req.user.user_id
+      ]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Template saved successfully",
+      template_id: result.insertId
+    });
+
+  } catch (err) {
+    console.error("Add Template Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to save template",
+      error: err.message
+    });
+  }
+};
 
 module.exports = {
   createEncounterTemplate,
@@ -245,5 +299,6 @@ module.exports = {
   getAllEncounters,
   getEncounterById,
   updateEncounterById,
-  deleteEncounterById
+  deleteEncounterById,
+  addEncounterTemplate
 };
