@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createEncounterTemplate, getEncounterTemplates, getEncounterTemplateById, updateTemplateById, deleteTemplateById, getAllEncounters, createEncounter, getEncounterById, deleteEncounterById,updateEncounterById,addEncounterTemplate,getProviderEncounterTemplates } = require('./encounterController');
+const { createEncounterTemplate, getEncounterTemplates, getEncounterTemplateById, updateTemplateById, deleteTemplateById, getAllEncounters, createEncounter, getEncounterById, deleteEncounterById,updateEncounterById,addEncounterTemplate,getProviderEncounterTemplates,updateProviderEncounterTemplate } = require('./encounterController');
 
 
 router.post('/template/create', createEncounterTemplate);
@@ -16,6 +16,7 @@ router.post('/create', createEncounter);
 router.get('/get/:encounter_id', getEncounterById);
 router.post('/update/:encounterId', updateEncounterById);
 router.delete('/delete/:encounterId', deleteEncounterById);
+router.post('/template/provider/update', updateProviderEncounterTemplate);
 
 
 module.exports = router;
