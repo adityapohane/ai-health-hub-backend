@@ -152,6 +152,31 @@ const getAllDocuments = async (req, res) => {
     });
   }
 };
+const getDocumentByPatientId = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing patient ID",
+      });
+    }
+    const user_id = req.user.user_id;
+    const sql = `SELECT pd.*,dt.document_type,CONCAT(up.firstname," ",up.lastname) AS patient_name FROM patient_documents pd LEFT JOIN document_types dt ON dt.document_type_id = pd.document_type_id JOIN users_mappings um ON um.user_id = pd.patient_id LEFT JOIN user_profiles up ON up.fk_userid = pd.patient_id WHERE pd.patient_id = ? AND um.fk_physician_id = ? `
+    const [types] = await connection.query(sql, [patientId,user_id]);
+    return res.status(200).json({
+      success: true,
+      message: "Document fetched successfully",
+      types
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Document cannot be fetched. Please try again.",
+    });
+  }
+};
 const uploadUserAgreementCtrl = async (req, res) => {
   try {
     const file = req.files?.pdf;
@@ -232,5 +257,6 @@ module.exports = {
   documentUploadCtrl,
   getDocumentsByPatientIdCtrl,
   getAllDocuments,
-  uploadUserAgreementCtrl
+  uploadUserAgreementCtrl,
+  getDocumentByPatientId
 }
