@@ -95,7 +95,7 @@ const loginCtrl = async (req, res) => {
     }
 
     const otp = generateOtp();
-
+console.log(otp)
     const emailRes = await mailSender(
       email,
       "AI Health Hub – 2FA Code for Login",
