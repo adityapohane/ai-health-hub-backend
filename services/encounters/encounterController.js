@@ -299,7 +299,7 @@ const addEncounterTemplate = async (req, res) => {
         req.user.user_id
       ]
     );
-
+    await logAudit(req, 'CREATE', 'APPOINTMENT_ENCOUNTER_TEMPLATE', req.user.user_id, `Encounter template created: ${encounter_name}`);
     res.status(200).json({
       success: true,
       message: "Template saved successfully",
@@ -364,7 +364,7 @@ const updateProviderEncounterTemplate = async (req, res) => {
         message: "Template not found or not authorized to update"
       });
     }
-
+    await logAudit(req, 'UPDATE', 'APPOINTMENT_ENCOUNTER_TEMPLATE', req.user.user_id, `Encounter template updated: ${encounter_name}`);
     res.status(200).json({
       success: true,
       message: "Template updated successfully"
