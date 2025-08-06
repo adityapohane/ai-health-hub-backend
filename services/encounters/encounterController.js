@@ -42,11 +42,39 @@ const createEncounterTemplate = async (req, res) => {
 const getEncounterTemplates = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    const  {template_id} = { ...req.params, ...req.query };
+    const  {templateId} = { ...req.params, ...req.query };
     let sql = `SELECT * FROM encounter_templates WHERE created_by = ${userId}`;
     
-    if(template_id){
-      sql += ` AND template_id = ${template_id}`;
+    if(templateId){
+      sql += ` AND template_id = ${templateId}`;
+    }
+    sql += ` order by created DESC`;
+    const [templates] = await connection.query(
+     sql,
+      [userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: templates
+    });
+  } catch (error) {
+    console.error("Get Encounter Templates Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+const getProviderEncounterTemplates = async (req, res) => { 
+  try {
+    const userId = req.user.user_id;
+    const  {templateId} = { ...req.params, ...req.query };
+    let sql = `SELECT * FROM encounter_templates WHERE created_by = ${userId}`;
+    
+    if(templateId){
+      sql += ` AND template_id = ${templateId}`;
     }
     sql += ` order by created DESC`;
     const [templates] = await connection.query(
@@ -69,12 +97,12 @@ const getEncounterTemplates = async (req, res) => {
 };
 
 const getEncounterTemplateById = async (req, res) => {
-  const { template_id } = { ...req.params, ...req.query };
+  const { templateId } = { ...req.params, ...req.query };
 
   try {
     const [rows] = await connection.query(
       `SELECT * FROM encounter_templates WHERE template_id = ?`,
-      [template_id]
+      [templateId]
     );
 
     if (rows.length === 0) {
@@ -87,12 +115,12 @@ const getEncounterTemplateById = async (req, res) => {
   }
 };
 const deleteTemplateById = async (req, res) => {
-  const { template_id } = { ...req.params, ...req.query };
+  const { templateId } = { ...req.params, ...req.query };
 
   try {
     await connection.query(
       `DELETE FROM encounter_templates WHERE template_id = ?`,
-      [template_id]
+      [templateId]
     );
 
     await logAudit(req, 'DELETE', 'ENCOUNTER_TEMPLATE', req.user.user_id, 'Encounter template deleted');
@@ -100,7 +128,7 @@ const deleteTemplateById = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to delete template' });
   }
-};
+};    
 const updateTemplateById = async (req, res) => {
   const { template_id } = { ...req.params, ...req.query };
   const {
@@ -300,5 +328,6 @@ module.exports = {
   getEncounterById,
   updateEncounterById,
   deleteEncounterById,
-  addEncounterTemplate
+  addEncounterTemplate,
+  getProviderEncounterTemplates
 };
