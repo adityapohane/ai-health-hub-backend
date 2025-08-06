@@ -71,7 +71,7 @@ const getProviderEncounterTemplates = async (req, res) => {
   try {
     const userId = req.user.user_id;
     const  {templateId} = { ...req.params, ...req.query };
-    let sql = `SELECT encounter_name, encounter_type, visit_type, is_default, is_active, soap_structure, billing_codes, created_by,created  FROM providers_encounter_template WHERE created_by = ${userId}`;
+    let sql = `SELECT template_id,encounter_name, encounter_type, visit_type, is_default, is_active, soap_structure, billing_codes, created_by,created  FROM providers_encounter_template WHERE created_by = ${userId}`;
     
     if(templateId){
       sql += ` AND template_id = ${templateId}`;
