@@ -99,15 +99,22 @@ const rawDateTime = date.replace("T", " ") + ":00"; // "2025-08-28 13:30:00"
 exports.getAppointmentsByProviderId = async (req, res) => {
   try {
     const { providerId } = req.params;
-
+    const { date } = req.query;
+    console.log(date);
     if (!providerId) {
       return res.status(400).json({ message: "Provider ID is required" });
     }
+    let query = `
+    SELECT * FROM appointment
+    WHERE provider_id = ?
+    ${date ? 'AND LEFT(date, 10) = ?' : ''}
+    ORDER BY date DESC
+  `;
+  let values = [providerId];
+if (date) values.push(date);
 
-    const [appointments] = await db.execute(
-      "SELECT * FROM appointment WHERE provider_id = ? ORDER BY date DESC",
-      [providerId]
-    );
+const [appointments] = await db.query(query, values);
+
 
     const transformed = await Promise.all(appointments.map(async (row) => {
       const utcDate = new Date(row.date); // Date from MySQL (in UTC)
