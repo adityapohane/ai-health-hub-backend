@@ -103,7 +103,22 @@ const generateAccessToken = async (req, res) => {
       return res.status(500).json({ message: 'Server error while generating token' });
     }
   };
+const getpatientDemographics = async (req, res) => {
+    const { patient_id } = req.params;
+    try {
+      const selectPatient = `SELECT * FROM patients WHERE patient_id = ${patient_id} LIMIT 1`;
+      const [patient] = await connection.query(selectPatient);
+      if(patient.length === 0){
+        return res.status(404).json({ message: 'Patient not found' });
+      }
+      return res.status(200).json(patient);
+    } catch (err) {
+      console.error('Error fetching patient demographics:', err);
+      return res.status(500).json({ message: 'Server error while fetching patient demographics' });
+    }
+  };
   module.exports = {
     registerUser,
-    generateAccessToken
+    generateAccessToken,
+    getpatientDemographics
   }

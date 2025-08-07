@@ -3,6 +3,9 @@ window.onload = function () {
   const canvas = document.getElementById('signature-pad');
   const clearButton = document.getElementById('clear-signature');
 
+  // Add layout class to canvas
+  canvas.classList.add('signature-box');
+
   // Resize canvas then initialize SignaturePad
   resizeCanvas(canvas);
   const signaturePad = new SignaturePad(canvas, {
@@ -32,14 +35,14 @@ window.onload = function () {
       return false;
     }
 
-    // ✅ Convert canvas to image and replace it inline (same position)
+    // ✅ Convert canvas to image and replace it inline
     const signatureImage = signaturePad.toDataURL('image/png');
     const img = document.createElement('img');
     img.src = signatureImage;
-    img.style.cssText = canvas.style.cssText;
     img.width = canvas.width / window.devicePixelRatio;
     img.height = canvas.height / window.devicePixelRatio;
     img.id = canvas.id;
+    img.className = 'signature-box'; // 👈 Keep same styling as canvas
 
     // Replace canvas with image in DOM
     canvas.parentNode.replaceChild(img, canvas);
@@ -62,7 +65,7 @@ window.onload = function () {
   };
 };
 
-// Validate that required checkboxes are ticked
+// Validate required checkboxes
 function validateConsentForm() {
   const checkboxes = document.querySelectorAll('input[type="checkbox"][required]');
   let allChecked = true;
@@ -97,6 +100,26 @@ function submitConsentForm() {
     return;
   }
 
+  // ✅ Update "Electronically Generated on" timestamp
+  const generatedEl = document.getElementById('generated-timestamp');
+  if (generatedEl) {
+    const now = new Date();
+    const formatted = now.toLocaleString(); // e.g., 8/1/2025, 11:59 PM
+    generatedEl.textContent = `Electronically Generated on ${formatted}`;
+  }
+
+  // ✅ Ensure footer exists
+  let footerEl = document.getElementById('footer-note');
+  if (!footerEl) {
+    footerEl = document.createElement('div');
+    footerEl.id = 'footer-note';
+    footerEl.style.cssText = 'background-color: #f1f1f1; padding: 15px; text-align: center; font-size: 13px; color: #777;';
+    const year = new Date().getFullYear();
+    footerEl.textContent = `© ${year} VARN DIGIHEALTH. All rights reserved.`;
+    document.body.appendChild(footerEl); // Or append to a specific container if needed
+  }
+
+  // ✅ Capture full HTML with timestamp/footer updated
   const data = {
     token,
     htmlContent: document.documentElement.outerHTML
@@ -110,9 +133,9 @@ function submitConsentForm() {
     body: JSON.stringify(data),
   })
     .then(response => {
+      const submitButton = document.querySelector('#consentForm button[type="submit"]');
       if (response.ok) {
         alert('Consent Form Submitted Successfully!');
-        const submitButton = document.querySelector('#consentForm button[type="submit"]');
         if (submitButton) {
           submitButton.textContent = 'Submitted';
           submitButton.disabled = true;
@@ -126,6 +149,7 @@ function submitConsentForm() {
       alert('Submission failed. Please try again.');
     });
 }
+
 
 // Resize canvas for high-DPI screens
 function resizeCanvas(canvas) {

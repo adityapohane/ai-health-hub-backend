@@ -3,7 +3,7 @@ const router = express.Router();
 const connection = require("../../config/db");  
 const { registerUser,generateAccessToken } = require("./api-handlers");
 const { verifyClient } = require("../../middleware/verifyClient");
-
+const { getpatientDemographics } = require("./api-handlers");
 /**
  * @swagger
  * tags:
@@ -133,6 +133,8 @@ router.post("/health", verifyClient, async (req, res) => {
         message: 'Server is running and responding'
     });
 });
+
+router.post("/patient/demographics", verifyClient, getpatientDemographics);
 
 
 module.exports = router
