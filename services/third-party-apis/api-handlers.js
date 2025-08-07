@@ -3,6 +3,7 @@ const logAudit = require("../../utils/logAudit");
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const joi = require('joi');
 const registerUser = async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -104,14 +105,32 @@ const generateAccessToken = async (req, res) => {
     }
   };
 const getpatientDemographics = async (req, res) => {
-    const { patient_id } = req.params;
+    const requiredSchema = joi.object({
+      patient_fname:joi.string().min(3).required(),
+      patient_lname:joi.string().min(3).required(),
+      patient_dob:joi.string().pattern(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/).required().messages({
+        'string.pattern.base': 'Invalid date format. Please use YYYY-MM-DD.'
+      })
+    })
+    const { error, value } = requiredSchema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+      const errors = error.details.map((detail) => ({
+        field: detail.path.join('.'),
+        message: detail.message
+      }));
+    
+      return res.status(400).json({ errors });
+    }
+    let sql = `SELECT * FROM user_profiles WHERE firstname LIKE "%${value.patient_fname}%" AND lastname LIKE "%${value.patient_lname}%" AND dob = "${value.patient_dob}" LIMIT 1`;
+    console.log(sql)
     try {
-      const selectPatient = `SELECT * FROM patients WHERE patient_id = ${patient_id} LIMIT 1`;
-      const [patient] = await connection.query(selectPatient);
-      if(patient.length === 0){
-        return res.status(404).json({ message: 'Patient not found' });
+      const [demographics] = await connection.query(sql);
+      // console.log(demographics)
+      if (demographics.length == 0) {
+        return res.status(404).json({ message: 'Patient demographics not found' });
       }
-      return res.status(200).json(patient);
+      return res.status(200).json({ demographics });
     } catch (err) {
       console.error('Error fetching patient demographics:', err);
       return res.status(500).json({ message: 'Server error while fetching patient demographics' });
@@ -121,4 +140,4 @@ const getpatientDemographics = async (req, res) => {
     registerUser,
     generateAccessToken,
     getpatientDemographics
-  }
+  } 
