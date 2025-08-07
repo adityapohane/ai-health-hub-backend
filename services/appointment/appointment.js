@@ -340,3 +340,27 @@ exports.updateAppointmentStatus = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+exports.saveAppointmentQA = async (req, res) => {
+  try {
+    const { appointmentId, data } = {...req.body,...req.params};
+
+    if (!appointmentId || !data) {
+      return res.status(400).json({ success: false, message: "Appointment ID and QA are required" });
+    }
+
+    const [result] = await db.execute(
+      "UPDATE appointment SET encounter_data = ? WHERE id = ?",
+      [JSON.stringify(data), appointmentId]
+    );  
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Appointment not found" });
+    }
+
+    await logAudit(req, 'UPDATE', 'APPOINTMENT', appointmentId, `Appointment QA updated`);
+    res.status(200).json({ success: true, message: "Appointment QA updated successfully" });
+  } catch (err) {
+    console.error("Update appointment QA error:", err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
