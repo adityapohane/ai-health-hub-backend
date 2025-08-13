@@ -869,9 +869,11 @@ WHEN 3 THEN 'Normal'
 ELSE 'NA'
 END AS status,
     address_line AS address,
-   service_type
+   service_type,
+     DATE_FORMAT(users.created, '%m/%d/%Y') AS enrollDate
   FROM user_profiles`
-      + ' LEFT JOIN users_mappings ON user_profiles.fk_userid = users_mappings.user_id WHERE users_mappings.fk_role_id = 7';
+  + ' LEFT JOIN users ON users.user_id = user_profiles.fk_userid'
+      + ' LEFT JOIN users_mappings ON users_mappings.user_id = user_profiles.fk_userid WHERE users_mappings.fk_role_id = 7';
     if (roleid == 6) {
       getAllQ += ` AND users_mappings.fk_physician_id = ${providerid}`;
     }
