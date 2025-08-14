@@ -3,6 +3,7 @@ const moment = require("moment");
 const logAudit = require("../../utils/logAudit");
 const fs = require('fs');
 const path = require('path');
+const Joi = require('joi');
 const getAllPatients = async (req, res) => {
     try {
         let {
@@ -480,12 +481,69 @@ const saveClaim = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+const checkEligibility =  async (req, res) => {
+  const ACCOUNT_KEY = process.env.MD_ACCOUNT_KEY;
+  const schema = Joi.object({
+    ins_name_l: Joi.string().required(),
+    ins_name_f: Joi.string().required(),
+    payerid: Joi.string().required(),
+    pat_rel: Joi.string().required(),
+    fdos: Joi.string().required(),
+    prov_npi: Joi.string().required(),
+    prov_taxid: Joi.string().required(),
+  });
+  const { error, value } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ success: false, message: error.details[0].message });
+  }
+  try {
+    const {
+      ins_name_l,
+      ins_name_f,
+      payerid,
+      pat_rel,
+      fdos,
+      prov_npi,
+      prov_taxid
+    } = req.body;
+
+    const formData = {
+      AccountKey: ACCOUNT_KEY,
+      ins_name_l,
+      ins_name_f,
+      payerid,
+      pat_rel,
+      fdos,
+      prov_npi,
+      prov_taxid
+    };
+
+    const resp = await fetch(`https://svc.claim.md/services/eligdata/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json"
+      },
+      body: new URLSearchParams(formData).toString()
+    });
+
+    const data = await resp.text();
+
+    // Send raw XML response back to client
+    res.status(200).send(data);
+
+  } catch (error) {
+    console.error("Eligibility request failed:", error);
+    res.status(500).json({ error: "Failed to check eligibility" });
+  }
+};
 module.exports = {
     getAllPatients,
     updateBillingStatus,
     getFormInformationForCms,
     sendForClaim,
-    saveClaim
+    saveClaim,
+    checkEligibility
 }
 
 
